@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.shortcuts import render,redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser, FormParser
 from rest_framework.decorators import api_view,permission_classes
@@ -332,6 +332,7 @@ from django.utils.cache import patch_cache_control
 @api_view(['GET'])
 @permission_classes((AllowAny, ))
 def display(request, employee_url):
+	print employee_url
 	if request.method == 'GET':
 		try:
 			employee = employee_url
@@ -341,7 +342,6 @@ def display(request, employee_url):
 				raise Employee.DoesNotExist
 		except Employee.DoesNotExist:
 			return HttpResponse("No employee matches query.",status=404)
-
 		cc = currentBillboard.findCurrentCampaign(employee)
 		if(cc is None):
 			return HttpResponse("Billboard improperly configured. No billboard.",status=404)
@@ -353,12 +353,11 @@ def display(request, employee_url):
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
-		response = {
-			"status":200,
-			"Content_Length": 0,
-		}
-		response =  HttpResponseRedirect(photo.imgurLink,**response)
+		response =  HttpResponseRedirect(photo.imgurLink)
+		response["Content_Length"] = 0
+		print response
 		patch_cache_control(response, no_cache=True)
+
 		return response
 		# return redirect(photo.imgurLink,permanent=True)#redirects to real photo
 	return HttpResponse(status=404)
