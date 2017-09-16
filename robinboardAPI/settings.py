@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     #external-user-custom
     'rest_framework',
     'django_s3_storage',
+    'corsheaders',
     #user applications
     'directory',
     'campaigns',
@@ -52,6 +53,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #custom corsheaders
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = 'robinboardAPI.urls'

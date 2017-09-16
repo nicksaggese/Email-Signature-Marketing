@@ -3,6 +3,7 @@ botocore==1.7.12
 certifi==2017.7.27.1
 chardet==3.0.4
 Django==1.11.5
+django-cors-headers==2.1.0
 django-s3-storage==0.12.0
 djangorestframework==3.6.4
 djangorestframework-jwt==1.11.0
