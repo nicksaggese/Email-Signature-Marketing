@@ -354,7 +354,12 @@ def display(request, employee_url):
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
 		response =  redirect(photo.imgurLink,permanent=True)
-
+		del response["Content-Type"]
+		response.status_code = 302
+		response["Content-Length"] = 0
+		response["Expires"] = -1
+		patch_cache_control(response, no_cache=True,no_store=True)
+		print response
 		return response
 	return HttpResponse(status=404)
 
