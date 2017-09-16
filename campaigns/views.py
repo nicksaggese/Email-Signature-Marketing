@@ -328,13 +328,13 @@ def billboard(request):
 		return HttpResponse(status=404)
 
 	#find most recent campaign of groups
+from django.utils.cache import patch_cache_control
 @api_view(['GET'])
 @permission_classes((AllowAny, ))
-def display(request):
+def display(request, employee_url):
 	if request.method == 'GET':
 		try:
-			employee = request.query_params.get('e')
-			print employee
+			employee = employee_url
 			if(employee != None):
 				employee = Employee.objects.get(url=employee)
 			else:
@@ -353,7 +353,14 @@ def display(request):
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
-		return redirect(photo.imgurLink,permanent=True)#redirects to real photo
+		response = {
+			"status":200,
+			"Content_Length": 0,
+		}
+		response =  HttpResponseRedirect(photo.imgurLink,**response)
+		patch_cache_control(response, no_cache=True)
+		return response
+		# return redirect(photo.imgurLink,permanent=True)#redirects to real photo
 	return HttpResponse(status=404)
 
 @api_view(['GET'])
