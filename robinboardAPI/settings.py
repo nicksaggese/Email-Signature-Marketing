@@ -38,6 +38,9 @@ INSTALLED_APPS = [
     #external-user-custom
     'rest_framework',
     'django_s3_storage',
+    #user applications
+    'directory',
+    'campaigns',
 ]
 
 MIDDLEWARE = [
