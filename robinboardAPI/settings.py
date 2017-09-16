@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     #external-user-custom
     'rest_framework',
-    'rest_framework.authtoken',#might not need this anymore with jwt
     'django_s3_storage',
 ]
 
