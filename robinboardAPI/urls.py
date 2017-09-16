@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.conf.urls import include
 from directory import urls as directory_urls
 from campaigns import urls as campaigns_urls
+from analytics import urls as analytics_urls
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^directory/', include(directory_urls, namespace='directory')),
     url(r'^campaigns/', include(campaigns_urls, namespace='campaigns')),
+    url(r'^analytics/', include(analytics_urls, namespace='analytics')),
 ]
