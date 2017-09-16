@@ -11,7 +11,7 @@ class Event(models.Model):
     remoteHost = models.CharField(null=True,max_length=150)
     remoteIP = models.CharField(null=True,max_length=150)
     userAgent = models.CharField(null=True,max_length=200)
-    language = models.CharField(max_length=1000)
+    language = models.CharField(null=True,max_length=1000)
     class Meta:
         abstract=True
 class Billboard(Event):
