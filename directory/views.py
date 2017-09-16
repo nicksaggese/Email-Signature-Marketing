@@ -12,6 +12,7 @@ from . import serializers
 from campaigns.models import Billboard
 
 from rest_framework import permissions
+from rest_framework.permissions import AllowAny
 from .permissions import StandardUserPermissions
 import re
 
@@ -46,6 +47,7 @@ def checkEmail(data,request):
 	return True
 # Create your views here.
 @api_view(['POST'])
+@permission_classes((AllowAny, ))
 def initialize(request):#send in combo of nested user and email
 	if request.method == 'POST':
 		data = JSONParser().parse(request)#parse incoming data
@@ -104,6 +106,7 @@ def initialize(request):#send in combo of nested user and email
 # 		return redirect('https://app.robinboard.com/login')
 
 @api_view(['POST',])
+@permission_classes((AllowAny, ))
 def forgotPassword(request):
 	if request.method == 'POST':
 		data = JSONParser().parse(request)#parse incoming data

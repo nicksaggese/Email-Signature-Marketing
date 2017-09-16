@@ -10,6 +10,7 @@ from . import models
 from . import serializers
 
 from rest_framework import permissions
+from rest_framework.permissions import AllowAny
 from directory.permissions import StandardUserPermissions
 from directory.models import Employee
 import os
@@ -328,7 +329,7 @@ def billboard(request):
 
 	#find most recent campaign of groups
 @api_view(['GET'])
-@permission_classes((StandardUserPermissions,))
+@permission_classes((AllowAny, ))
 def display(request):
 	if request.method == 'GET':
 		try:
@@ -356,7 +357,7 @@ def display(request):
 	return HttpResponse(status=404)
 
 @api_view(['GET'])
-@permission_classes((StandardUserPermissions,))
+@permission_classes((AllowAny, ))
 def clickthrough(request):
 	if request.method == 'GET':
 		employee = request.query_params.get('e')
