@@ -353,13 +353,12 @@ def display(request, employee_url):
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
-		response =  HttpResponseRedirect(photo.imgurLink)
+		response =  redirect(photo.imgurLink,permanent=True)
 		response["Content_Length"] = 0
 		print response
 		patch_cache_control(response, no_cache=True)
 
 		return response
-		# return redirect(photo.imgurLink,permanent=True)#redirects to real photo
 	return HttpResponse(status=404)
 
 @api_view(['GET'])
