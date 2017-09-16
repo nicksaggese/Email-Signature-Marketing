@@ -124,6 +124,7 @@ MEDIA_ROOT = ''
 #django s3
 DEFAULT_FILE_STORAGE = "django_s3_storage.storage.S3Storage"
 STATICFILES_STORAGE = "django_s3_storage.storage.StaticS3Storage"
+AWS_S3_BUCKET_AUTH = True
 
 # The AWS region to connect to.
 AWS_REGION = "us-east-1"
@@ -135,3 +136,16 @@ AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID_DJANGO']
 
 # The AWS secret access key to use.
 AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY_DJANGO']
+
+EMAIL_BACKEND = 'django_ses.SESBackend'
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+            'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    )
+}
