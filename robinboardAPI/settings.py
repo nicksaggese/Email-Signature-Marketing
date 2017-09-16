@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     #user applications
     'directory',
     'campaigns',
+    'analytics',
 ]
 
 MIDDLEWARE = [
