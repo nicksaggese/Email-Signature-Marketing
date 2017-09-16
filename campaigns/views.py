@@ -349,7 +349,10 @@ def display(request, employee_url):
 		medias = models.BillboardMedia.objects.filter(billboard=cc)
 		photo = None
 		if(len(medias) > 0):
-			photo = medias[0].photo
+			for p in medias:
+				if(p.on):
+					photo = p.photo
+					break
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
