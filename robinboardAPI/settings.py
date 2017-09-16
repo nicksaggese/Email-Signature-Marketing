@@ -119,3 +119,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+
+MEDIA_ROOT = ''
+#django s3
+DEFAULT_FILE_STORAGE = "django_s3_storage.storage.S3Storage"
+STATICFILES_STORAGE = "django_s3_storage.storage.StaticS3Storage"
+
+# The AWS region to connect to.
+AWS_REGION = "us-east-1"
+# The name of the bucket to store files in.
+AWS_S3_BUCKET_NAME = "robinboard"
+
+# The AWS access key to use.
+AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID_DJANGO']
+
+# The AWS secret access key to use.
+AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY_DJANGO']
