@@ -353,7 +353,7 @@ def display(request):
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
-		return redirect(photo.imgurLink)#redirects to real photo
+		return redirect(photo.imgurLink,permanent=True)#redirects to real photo
 	return HttpResponse(status=404)
 
 @api_view(['GET'])
