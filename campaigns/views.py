@@ -356,8 +356,16 @@ def display(request, employee_url):
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
-		response =  redirect(photo.imgurLink,permanent=True)
-		del response["Content-Type"]
+		# response =  redirect(photo.imgurLink,permanent=True)
+		# del response["Content-Type"]
+		import random
+		from photos import photo1,photo2
+		photo = random.randint(1,2)
+		if(photo == 1):
+			photo = photo1
+		else:
+			photo = photo2
+		response = HttpResponse(photo, content_type="image")
 		response.status_code = 302
 		response["Content-Length"] = 0
 		response["Expires"] = -1
