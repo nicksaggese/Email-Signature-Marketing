@@ -356,6 +356,10 @@ def display(request, employee_url):
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
+		#rate limiter funciton here
+
+		print request.META
+
 		# response =  redirect(photo.imgurLink,permanent=True)
 		# del response["Content-Type"]
 		import random
