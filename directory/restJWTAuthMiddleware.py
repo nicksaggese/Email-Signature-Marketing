@@ -20,4 +20,6 @@ class AuthenticationMiddlewareJWT(object):
         jwt_authentication = JSONWebTokenAuthentication()
         if jwt_authentication.get_jwt_value(request):
             user, jwt = jwt_authentication.authenticate(request)
+        print jwt_authentication.get_jwt_value(request)
+        print jwt_authentication.authenticate(request)
         return user
