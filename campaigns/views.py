@@ -363,14 +363,14 @@ def display(request, employee_url):
 
 		# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
 		if "via ggpht.com GoogleImageProxy" in str(request.META.get('HTTP_USER_AGENT')):#google coming in hot
-			print "Google access."
-			photo = urlopen(photo.imgurLink).read()
 			ext = re.search("\.[a-z]{3}$",photo.imgurLink)
 			ctype = "image/jpg"
 			if(ext == ".png"):
 				ctype == "image/png"
 			elif(ext == ".gif"):
 				return HttpResponse("Image is type gif. Invalid to return.",status=404)
+			photo = urlopen(photo.imgurLink).read()
+
 			response = HttpResponse(image_data, content_type=ctype)#will  break if gif...no gifs allowed!
 			response.status_code = 200
 		else:
