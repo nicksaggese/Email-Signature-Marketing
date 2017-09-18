@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     #custom auth
-    'directory.restJWTAuthMiddleware.AuthenticationMiddlewareJWT',
+    # 'directory.restJWTAuthMiddleware.AuthenticationMiddlewareJWT',
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
