@@ -369,7 +369,9 @@ def display(request, employee_url):
 			ctype = "image/jpg"
 			if(ext == ".png"):
 				ctype == "image/png"
-			response = HttpResponse(image_data, content_type=ctype)
+			elif(ext == ".gif"):
+				return HttpResponse("Image is type gif. Invalid to return.",status=404)
+			response = HttpResponse(image_data, content_type=ctype)#will  break if gif...no gifs allowed!
 			response.status_code = 200
 		else:
 			response =  redirect(photo.imgurLink,permanent=True)
