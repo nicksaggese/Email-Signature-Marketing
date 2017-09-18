@@ -23,6 +23,8 @@ from dateutil import parser as datetime_parser
 from analytics import actions as analytics_actions
 from directory.helpers import disallowChanges, userDateParse
 
+import re
+
 class JSONResponse(HttpResponse):
 	"""
 	An HttpResponse that renders its content into JSON.
@@ -361,8 +363,13 @@ def display(request, employee_url):
 
 		# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
 		if "via ggpht.com GoogleImageProxy" in str(request.META.get('HTTP_USER_AGENT')):#google coming in hot
+			print "Google access."
 			photo = urlopen(photo.imgurLink).read()
-			response = HttpResponse(image_data, content_type="image/gif")
+			ext = re.search("\.[a-z]{3}$",photo.imgurLink)
+			ctype = "image/jpg"
+			if(ext == ".png"):
+				ctype == "image/png"
+			response = HttpResponse(image_data, content_type=ctype)
 			response.status_code = 200
 		else:
 			response =  redirect(photo.imgurLink,permanent=True)
