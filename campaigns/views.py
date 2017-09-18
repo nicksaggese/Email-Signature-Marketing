@@ -371,7 +371,7 @@ def display(request, employee_url):
 				return HttpResponse("Image is type gif. Invalid to return.",status=404)
 			photo = urlopen(photo.imgurLink).read()
 
-			response = HttpResponse(image_data, content_type=ctype)#will  break if gif...no gifs allowed!
+			response = HttpResponse(photo, content_type=ctype)#will  break if gif...no gifs allowed!
 			response.status_code = 200
 		else:
 			response =  redirect(photo.imgurLink,permanent=True)
