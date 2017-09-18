@@ -1,6 +1,6 @@
 # Start with our base settings
 from .settings import *
-DEBUG=False
+DEBUG=True
 DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
