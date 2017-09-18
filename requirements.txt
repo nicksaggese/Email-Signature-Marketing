@@ -20,5 +20,6 @@ pytz==2017.2
 requests==2.18.4
 s3transfer==0.1.11
 six==1.10.0
+stripe==1.65.0
 urllib3==1.22
 xxhash==1.0.1
