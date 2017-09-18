@@ -361,16 +361,20 @@ def display(request, employee_url):
 		import random
 		from urllib2 import urlopen
 		photo = random.randint(1,100)
+		# if(photo > 50):
+		# 	image_data = urlopen("https://i.imgur.com/cbV4Lno.gif").read()
+		# else:
+		# 	image_data = urlopen("https://i.imgur.com/85ayUGd.gif").read()
+		# response = HttpResponse(image_data, content_type="image/gif")
+		# response.status_code = 200
+
 		if(photo > 50):
-			image_data = urlopen("https://i.imgur.com/cbV4Lno.gif").read()
+			response = redirect("https://i.imgur.com/cbV4Lno.gif")
 		else:
-			image_data = urlopen("https://i.imgur.com/85ayUGd.gif").read()
-		response = HttpResponse(image_data, content_type="image/gif")
-		response.status_code = 200
-		# response.status_code=302
+			response = redirect("https://i.imgur.com/85ayUGd.gif")
+		response.status_code=302
 		response["Expires"] = -1
-		patch_cache_control(response, no_cache=True,no_store=True)
-		print response
+		patch_cache_control(response, private=True,no_cache=True,no_store=True)
 		return response
 	return HttpResponse(status=404)
 
