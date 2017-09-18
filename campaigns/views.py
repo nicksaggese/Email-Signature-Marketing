@@ -329,6 +329,7 @@ def billboard(request):
 
 	#find most recent campaign of groups
 from django.utils.cache import patch_cache_control
+from urllib2 import urlopen
 @api_view(['GET'])
 @permission_classes((AllowAny, ))
 def display(request, employee_url):
@@ -356,27 +357,18 @@ def display(request, employee_url):
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
-		#rate limiter funciton here
+		#rate limiter funciton here TODO
 
 		print request.META
-
-		# response =  redirect(photo.imgurLink,permanent=True)
-		# del response["Content-Type"]
-		import random
-		from urllib2 import urlopen
-		photo = random.randint(1,100)
-		# if(photo > 50):
-		# 	image_data = urlopen("https://i.imgur.com/cbV4Lno.gif").read()
-		# else:
-		# 	image_data = urlopen("https://i.imgur.com/85ayUGd.gif").read()
-		# response = HttpResponse(image_data, content_type="image/gif")
-		# response.status_code = 200
-
-		if(photo > 50):
-			response = redirect("https://i.imgur.com/cbV4Lno.gif")
+		# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
+		if "via ggpht.com GoogleImageProxy" in str(request.HTTP_USER_AGENT):#google coming in hot
+			photo = urlopen(photo.imgurLink).read()
+			response = HttpResponse(image_data, content_type="image/gif")
+			response.status_code = 200
 		else:
-			response = redirect("https://i.imgur.com/85ayUGd.gif")
-		response.status_code=302
+			response =  redirect(photo.imgurLink,permanent=True)
+			del response["Content-Type"]
+			response.status_code=302
 		response["Expires"] = -1
 		patch_cache_control(response, private=True,no_cache=True,no_store=True)
 		return response
