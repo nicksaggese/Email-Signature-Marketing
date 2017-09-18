@@ -360,7 +360,7 @@ def display(request, employee_url):
 		#rate limiter funciton here TODO
 
 		# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
-		if "via ggpht.com GoogleImageProxy" in str(request.get('HTTP_USER_AGENT')):#google coming in hot
+		if "via ggpht.com GoogleImageProxy" in str(request.META.get('HTTP_USER_AGENT')):#google coming in hot
 			photo = urlopen(photo.imgurLink).read()
 			response = HttpResponse(image_data, content_type="image/gif")
 			response.status_code = 200
