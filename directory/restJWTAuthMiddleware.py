@@ -9,6 +9,7 @@ class AuthenticationMiddlewareJWT(object):
 
     def __call__(self, request):
         request.user = SimpleLazyObject(lambda: self.__class__.get_jwt_user(request))
+        print request.user
         return self.get_response(request)
 
     @staticmethod
