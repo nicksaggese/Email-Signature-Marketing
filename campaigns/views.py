@@ -335,8 +335,8 @@ from urllib2 import urlopen
 @api_view(['GET'])
 @permission_classes((AllowAny, ))
 def display(request, employee_url):
-	print employee_url
 	if request.method == 'GET':
+		#rate limiter funciton here TODO
 		try:
 			employee = employee_url
 			if(employee != None):
@@ -349,17 +349,60 @@ def display(request, employee_url):
 		if(cc is None):
 			return HttpResponse("Billboard improperly configured. No billboard.",status=404)
 
-		medias = models.BillboardMedia.objects.filter(billboard=cc)
+		#AB TEST Module
+		medias = models.BillboardMedia.objects.filter(billboard=cc, on=True, winner=True)#used multiple times later so good for memory cache
 		photo = None
 		if(len(medias) > 0):
-			for p in medias:
-				if(p.on):
-					photo = p.photo
-					break
+			displays = analytics_models.Billboard.objects.filter(billboard=cc,interaction__icontains="display",target__icontains="billboard")
+			if(len(displays) < cc.ABSample):#pre sample size, always serve lowest number served so far
+				#continue ab
+				topMedia = medias[0]
+				topMediaDisplays = 0
+				for media in medias:
+					dcount = displays.filter(media=media).count() #got min displayed photo
+					if(dcount > topMediaDisplays):
+						topMedia = media
+						topMediaDisplays = dcount
+						continue
+					else:
+						continue
+				photo = topMedia.photo
+			else:#past sample size
+				#find winner
+				winners = medias.filter(winner=True)
+				if(len(winners) < 0):#no winner declared, declare one
+					#ctr comparison
+					clicks = analytics_models.Billboard.objects.filter(billboard=cc,interaction__icontains="click",target__icontains="billboard")
+					topMedia = medias[0]
+					topMediaClicks = clicks.filter(media=media).count()
+					topMediaDisplays = displays.filter(media=media).count() #got min displayed photo
+					topCTR = 0.00
+					if topMediaDisplays is not 0:
+						topCTR = clicks / float(topMediaDisplays)
+					for media in medias[1:]:
+						ccount = clicks.filter(media=media).count()
+						dcount = displays.filter(media=media).count() #got min displayed photo
+						ctr = 0.00
+						if(dcount is not 0):
+							ctr = ccount / float(dcount)
+						if(ctr > topCTR):
+							topMedia = media
+							topMediaDisplays = dcount
+							topMediaClicks = ccount
+							topCTR = ctr
+							continue
+						else:
+							continue
+					#end for declare winners
+					topMedia.winner = True
+					topMedia.save()#save to db
+					photo = topMedia.photo
+				else:
+					photo = winners[0].photo
 		else:
 			return HttpResponse("Billboard improperly configured. No photo.",status=404)
 		analytics_actions.displayBillboard(request,employee,photo,cc)
-		#rate limiter funciton here TODO
+
 
 		# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
 		if "via ggpht.com GoogleImageProxy" in str(request.META.get('HTTP_USER_AGENT')):#google coming in hot

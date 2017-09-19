@@ -12,6 +12,7 @@ class Billboard(models.Model):
     targeturl = models.CharField(max_length=2083)
     start = models.DateTimeField(auto_now=True)
     end = models.DateTimeField(null=True)#null is it doesn't end.
+    ABSample = models.IntegerField(default=100)
 class Photo(models.Model):#allows for varied media for future ab testing
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     imgurDeleteHash = models.CharField(max_length=2083)
@@ -23,3 +24,4 @@ class BillboardMedia(models.Model):
     billboard = models.ForeignKey(Billboard, on_delete=models.CASCADE)
     photo = models.ForeignKey(Photo, on_delete=models.CASCADE)
     on = models.BooleanField(default=True)
+    ABWinner = models.BooleanField(default=False)

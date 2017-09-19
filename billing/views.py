@@ -108,3 +108,6 @@ def billingDetails(request):
             }
             return JSONResponse(response, status=200)
     return HttpResponse(status=404)
+def bills(request):
+    if request.method = 'GET':
+        pass#return list of all bills... and payment status
