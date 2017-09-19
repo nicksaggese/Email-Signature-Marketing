@@ -8,7 +8,6 @@ from rest_framework.parsers import JSONParser, FormParser
 from rest_framework.decorators import api_view,permission_classes
 
 from rest_framework import permissions
-from directory.permissions import StandardUserPermissions
 
 from . import models
 from . import serializers

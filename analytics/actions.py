@@ -11,7 +11,7 @@ def buildEvent(request):
 def addBillboardInfo(e,employee,photo,billboard):
     e["media"]=photo
     e["employee"]=employee
-    e["billboard"]=billboard
+    e["billboardMedia"]=billboard
     return e
 def displayBillboard(request,employee,photo,billboard):
     e = buildEvent(request)

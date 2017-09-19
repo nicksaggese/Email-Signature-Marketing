@@ -11,11 +11,10 @@ def findCurrentCampaign(employee):
             boards.append(b)
         elif(b.end > datetime.now()):
             boards.append(b)
-    billboards = boards
-    if(len(billboards) > 0):
-        minstart = billboards[0]
-        for billboard in billboards:
+    if(len(boards) > 0):
+        minstart = boards[0]
+        for billboard in boards:
             if billboard.start < minstart.start:
                 minstart = billboard
-        return billboard
+        return minstart
     return None

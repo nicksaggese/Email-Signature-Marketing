@@ -10,5 +10,13 @@ def forgotPassword(user,temp_pass):
     except smtplib.SMTPException:
         return False
 
-def confirmUserDomain():
-    pass
+def RequestUserConfirm(email,confirmCode):
+    print "in here"
+    subject = "Robinboard Confirm Email and Company Domain"
+    message = "<a href=\"http://localhost:8000/directory/confirm/?confirm=" + confirmCode + "\">Click to confirm your account and company domain with Robinboard.</a>"
+    print message
+    fromEmail = "nick@robinboard.com"
+    to = [email,]
+    send_mail(subject,message,fromEmail,to,fail_silently=False)
+    return True
+    #exceptions handled in outside catch

@@ -6,7 +6,7 @@ from django.db import models
 from directory.models import Group,Company
 # Create your models here.
 class Billboard(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, related_name ="owner",on_delete=models.CASCADE)
     groups = models.ManyToManyField(Group,blank=True)#campaigns applied by smallest group, then most recent
     name = models.CharField(max_length=150)
     targeturl = models.CharField(max_length=2083)

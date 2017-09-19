@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-
+from robinboardAPI.permissions import check_user_access
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from rest_framework.renderers import JSONRenderer
@@ -13,7 +13,6 @@ from campaigns.models import Billboard
 
 from rest_framework import permissions
 from rest_framework.permissions import AllowAny
-from .permissions import StandardUserPermissions
 import re
 
 from django.contrib.auth import authenticate, login, logout
@@ -21,6 +20,9 @@ from django.contrib.auth.hashers import make_password
 
 from rest_framework.authtoken.models import Token
 from .helpers import disallowChanges
+
+import os
+from . import userEmails
 
 # Create your views here.
 class JSONResponse(HttpResponse):
@@ -46,6 +48,11 @@ def checkEmail(data,request):
 			return False
 	return True
 # Create your views here.
+import hashlib
+def generateConfirmCode(email,first,last):
+	print os.environ.get('CONFIRM_EMAIL_SECRET')
+	string = str(email)+str(first)+str(last)+str(os.environ.get('CONFIRM_EMAIL_SECRET'))
+	return hashlib.md5(string).hexdigest()
 @api_view(['POST'])
 @permission_classes((AllowAny, ))
 def initialize(request):#send in combo of nested user and email
@@ -70,9 +77,14 @@ def initialize(request):#send in combo of nested user and email
 				serializer = serializers.UserSerializer(data=data.get('user'))
 				if serializer.is_valid():
 					serializer.save()
-					#TODO implement initialization function to create initial group where all employees will reside
+					#send email for confirmation
+					#gen confirm confirmCode
+
+					confirmCode = generateConfirmCode(data.get('user').get('email'),data.get('user').get('first'),data.get('user').get('last'))
+					userEmails.RequestUserConfirm(data.get('user').get('email'),confirmCode)
 					disallowed = ["is_staff","is_active","is_superuser","confirmed","password"]
 					data = disallowChanges(disallowed,serializer.data)
+
 					return JSONResponse(data, status=200)#success in creating the resource
 				else:
 					c.delete()#remove company because user failed
@@ -83,27 +95,6 @@ def initialize(request):#send in combo of nested user and email
 				}
 				return JSONResponse(message,status=400)
 	return JSONResponse(serializer.errors, status=400)
-
-# @api_view(['POST',])
-# def applogin(request):
-# 	if request.method == 'POST':
-# 		data = JSONParser().parse(request)#parse incoming data
-# 		user = authenticate(username=data["username"],password=data["password"])
-# 		if user is not None:
-# 			t, created = Token.objects.get_or_create(user=user)
-#
-# 			return JSONResponse({
-# 				"token":t.key
-# 			},status=200)
-# 			# return redirect('https://app.robinboard.com/dashboard')
-# 		else:
-# 			return HttpResponse(status=401)
-# @api_view(['GET',])
-# def applogout(request):
-# 	if request.method == 'GET':
-# 		logout(request)
-# 		return HttpResponse(status=200)
-# 		return redirect('https://app.robinboard.com/login')
 
 @api_view(['POST',])
 @permission_classes((AllowAny, ))
@@ -118,7 +109,6 @@ def forgotPassword(request):
 		return redirect('https://app.robinboard.com/login')
 
 @api_view(['POST','GET','PUT','DELETE'])
-@permission_classes((StandardUserPermissions,))
 def company(request):
 	if request.method == 'GET':
 		try:
@@ -155,7 +145,6 @@ def company(request):
 	return JSONResponse(serializer.errors, status=400)
 
 @api_view(['POST','GET','PUT','DELETE'])
-@permission_classes((StandardUserPermissions,))
 def user(request):
 	# if request.method == 'POST':
 	# 	data = JSONParser().parse(request)#parse incoming data
@@ -215,7 +204,6 @@ def createEmployeeURL(employee):
 
 #add edit delete individual Employee
 @api_view(['POST','GET','PUT','DELETE'])
-@permission_classes((StandardUserPermissions,))
 def employee(request):
 	query_type = request.query_params.get('type')
 	if(query_type == "single"):
@@ -234,6 +222,11 @@ def employee(request):
 		elif request.method == 'GET':
 			try:
 				b = models.Employee.objects.get(id=request.query_params.get('id'))
+				try:
+					check_user_access(request,b)
+				except Exception as e:
+					return HttpResponse(e,status=401)
+
 				serializer = serializers.EmployeeSerializer(b)
 				return JSONResponse(serializer.data, status=200)
 			except models.Employee.DoesNotExist:
@@ -352,7 +345,6 @@ def employee(request):
 # def addToGroups(request):
 # 	pass
 @api_view(['POST','GET','PUT','DELETE'])
-@permission_classes((StandardUserPermissions,))
 def group(request):#get groups, delete groups.
 	query_type = request.query_params.get('type')
 	if(query_type == "list"):

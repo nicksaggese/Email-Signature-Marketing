@@ -11,7 +11,6 @@ from . import serializers
 
 from rest_framework import permissions
 from rest_framework.permissions import AllowAny
-from directory.permissions import StandardUserPermissions
 from directory.models import Employee
 import os
 import imgur
@@ -21,6 +20,7 @@ from datetime import datetime
 import pytz
 from dateutil import parser as datetime_parser
 from analytics import actions as analytics_actions
+from analytics import models as analytics_models
 from directory.helpers import disallowChanges, userDateParse
 
 import re
@@ -36,7 +36,6 @@ class JSONResponse(HttpResponse):
 # disallowed = ["company",]
 # data = disallowChanges(disallowed,data)
 @api_view(['POST','PUT',])
-@permission_classes((StandardUserPermissions,))
 def billboardPhoto(request):
 	if request.method == 'POST':#create billboard with photo at same time
 		data = JSONParser().parse(request)#parse incoming data
@@ -130,7 +129,6 @@ def billboardPhoto(request):
 
 
 @api_view(['PUT','DELETE'])
-@permission_classes((StandardUserPermissions,))
 def billboardMedia(request):
 	# if request.method == 'POST':
 	# 	data = JSONParser().parse(request)#parse incoming data
@@ -172,7 +170,6 @@ def billboardMedia(request):
 			return HttpResponse("No billboard media for this id",status=404)
 	return JSONResponse(serializer.errors, status=400)
 @api_view(['POST','GET','DELETE'])
-@permission_classes((StandardUserPermissions,))
 def photo(request):
 		if request.method == 'POST':#create photo on imgur and upload at same time
 			data = JSONParser().parse(request)#parse incoming data
@@ -214,7 +211,6 @@ def photo(request):
 		return JSONResponse(serializer.errors, status=400)
 
 @api_view(['POST','GET','PUT','DELETE'])
-@permission_classes((StandardUserPermissions,))
 def billboard(request):
 	query_type = request.query_params.get('type')
 	if query_type == "single":
@@ -350,16 +346,19 @@ def display(request, employee_url):
 			return HttpResponse("Billboard improperly configured. No billboard.",status=404)
 
 		#AB TEST Module
-		medias = models.BillboardMedia.objects.filter(billboard=cc, on=True, winner=True)#used multiple times later so good for memory cache
+		medias = models.BillboardMedia.objects.filter(billboard=cc, on=True)#used multiple times later so good for memory cache
 		photo = None
+		print medias
 		if(len(medias) > 0):
+			print "medias found"
 			displays = analytics_models.Billboard.objects.filter(billboard=cc,interaction__icontains="display",target__icontains="billboard")
 			if(len(displays) < cc.ABSample):#pre sample size, always serve lowest number served so far
+				print "sample area"
 				#continue ab
 				topMedia = medias[0]
 				topMediaDisplays = 0
 				for media in medias:
-					dcount = displays.filter(media=media).count() #got min displayed photo
+					dcount = displays.filter(billboardMedia=media).count() #got min displayed photo
 					if(dcount > topMediaDisplays):
 						topMedia = media
 						topMediaDisplays = dcount
@@ -369,19 +368,19 @@ def display(request, employee_url):
 				photo = topMedia.photo
 			else:#past sample size
 				#find winner
-				winners = medias.filter(winner=True)
-				if(len(winners) < 0):#no winner declared, declare one
+				winners = medias.filter(ABWinner=True)
+				if(len(winners) is 0):#no winner declared, declare one
 					#ctr comparison
-					clicks = analytics_models.Billboard.objects.filter(billboard=cc,interaction__icontains="click",target__icontains="billboard")
+					clicks = analytics_models.Billboard.objects.filter(billboardMedia__billboard=cc.id,interaction__icontains="click",target__icontains="billboard")
 					topMedia = medias[0]
-					topMediaClicks = clicks.filter(media=media).count()
-					topMediaDisplays = displays.filter(media=media).count() #got min displayed photo
+					topMediaClicks = clicks.filter(billboardMedia=medias[0]).count()
+					topMediaDisplays = displays.filter(billboardMedia=medias[0]).count() #got min displayed photo
 					topCTR = 0.00
 					if topMediaDisplays is not 0:
 						topCTR = clicks / float(topMediaDisplays)
 					for media in medias[1:]:
-						ccount = clicks.filter(media=media).count()
-						dcount = displays.filter(media=media).count() #got min displayed photo
+						ccount = clicks.filter(billboardMedia=media).count()
+						dcount = displays.filter(billboardMedia=media).count() #got min displayed photo
 						ctr = 0.00
 						if(dcount is not 0):
 							ctr = ccount / float(dcount)
@@ -394,7 +393,7 @@ def display(request, employee_url):
 						else:
 							continue
 					#end for declare winners
-					topMedia.winner = True
+					topMedia.ABWinner = True
 					topMedia.save()#save to db
 					photo = topMedia.photo
 				else:
