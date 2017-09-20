@@ -19,6 +19,7 @@ def check_user_access(request,obj):
         message = "You have not yet confirmed your email address. Please check your inbox to confirm your account."
         raise BadAccess(message)
     if(obj.company == u.company):
+        print "good access"
         return True
     else:
         message = "You do not have access to this data."

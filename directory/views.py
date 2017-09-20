@@ -17,8 +17,8 @@ import re
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import User
 
-from rest_framework.authtoken.models import Token
 from .helpers import disallowChanges
 
 import os
@@ -117,8 +117,6 @@ def confirmUser(request):
 			return redirect("https://app.robinboard.com/confirmed",permanent=True)#redirect to app
 		else:
 			return HttpResponse("invalid code.",status=403)
-from django.contrib.auth.models import User
-from django.contrib.auth import hashers
 @api_view(['POST',])
 @permission_classes((AllowAny, ))
 def forgotPassword(request):
@@ -129,7 +127,7 @@ def forgotPassword(request):
 		except models.User.DoesNotExist:
 			return HttpResponse("User not found.",status=404)
 		temp_pass =  User.objects.make_random_password()
-		u.password = hashers.make_password(temp_pass)
+		u.password = make_password(temp_pass)
 		#send password email
 		userEmails.forgotPassword(u,temp_pass)
 		return HttpResponse(status=200)
