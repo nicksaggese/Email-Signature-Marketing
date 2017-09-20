@@ -50,7 +50,6 @@ def checkEmail(data,request):
 # Create your views here.
 import hashlib
 def generateConfirmCode(email,first,last):
-	print os.environ.get('CONFIRM_EMAIL_SECRET')
 	string = str(email)+str(first)+str(last)+str(os.environ.get('CONFIRM_EMAIL_SECRET'))
 	return hashlib.md5(string).hexdigest()
 @api_view(['POST'])
@@ -79,9 +78,12 @@ def initialize(request):#send in combo of nested user and email
 					serializer.save()
 					#send email for confirmation
 					#gen confirm confirmCode
-
-					confirmCode = generateConfirmCode(data.get('user').get('email'),data.get('user').get('first'),data.get('user').get('last'))
-					userEmails.RequestUserConfirm(data.get('user').get('email'),confirmCode)
+					email = data.get('user').get('email')
+					first_name = data.get('user').get('first_name')
+					last_name = data.get('user').get('last_name')
+					confirmCode = generateConfirmCode(email,first_name,last_name)
+					userEmails.RequestUserConfirm(email,confirmCode)
+					
 					disallowed = ["is_staff","is_active","is_superuser","confirmed","password"]
 					data = disallowChanges(disallowed,serializer.data)
 
@@ -96,6 +98,25 @@ def initialize(request):#send in combo of nested user and email
 				return JSONResponse(message,status=400)
 	return JSONResponse(serializer.errors, status=400)
 
+@api_view(['GET'])
+@permission_classes((AllowAny, ))
+def confirmUser(request):
+	if request.method == "GET":
+		confirmCode = request.query_params.get("confirmCode")
+		email = request.query_params.get("email")
+		try:
+			user = models.User.objects.get(email=email)
+		except models.User.DoesNotExist:
+			return HttpResponse("invalid.",status=403)
+		correct = generateConfirmCode(user.email,user.first_name,user.last_name)
+		print correct
+		print confirmCode
+		if correct == confirmCode:
+			user.confirmed = True
+			user.save()
+			return redirect("https://app.robinboard.com/confirmed",permanent=True)#redirect to app
+		else:
+			return HttpResponse("invalid code.",status=403)
 @api_view(['POST',])
 @permission_classes((AllowAny, ))
 def forgotPassword(request):
@@ -189,7 +210,6 @@ def user(request):
 		if serializer.is_valid():
 			serializer.save()
 			return JSONResponse(serializer.data, status=200)
-
 	# elif request.method == 'DELETE':
 	# 	try:
 	# 		b = models.User.objects.get(id=request.query_params['id'])
@@ -197,6 +217,7 @@ def user(request):
 	# 	except models.User.DoesNotExist:
 	# 		return HttpResponse(status=404)
 	# return JSONResponse(serializer.errors, status=400)
+
 
 import xxhash, random
 def createEmployeeURL(employee):
