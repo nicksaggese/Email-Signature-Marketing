@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from robinboardAPI.permissions import check_user_access
+from robinboardAPI.permissions import check_user_access, BadAccess
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from rest_framework.renderers import JSONRenderer
@@ -201,7 +201,7 @@ def user(request):
 			return HttpResponse(status=404)
 		else:#list
 			return HttpResponse(status=404)
-	elif request.method == 'PUT':#only current user
+	elif request.method == 'PUT':#only current user #need ability to change this to edit other users.. or at least create, delete, promote, demote
 		data = JSONParser().parse(request)#parse incoming data
 		disallowed = ["is_staff","is_active","is_superuser","confirmed"]
 		data = disallowChanges(disallowed,data)
@@ -249,15 +249,14 @@ def employee(request):
 		elif request.method == 'GET':
 			try:
 				b = models.Employee.objects.get(id=request.query_params.get('id'))
-				try:
-					check_user_access(request,b)
-				except Exception as e:
-					return HttpResponse(e,status=401)
+				check_user_access(request,b)
 
 				serializer = serializers.EmployeeSerializer(b)
 				return JSONResponse(serializer.data, status=200)
 			except models.Employee.DoesNotExist:
 				return HttpResponse(status=404)
+			except BadAccess as b:
+				return HttpResponse(b,status=401)
 		elif request.method == 'PUT':
 			data = JSONParser().parse(request)#parse incoming data
 			disallowed = ["url","company"]
@@ -266,8 +265,11 @@ def employee(request):
 				return  HttpResponse(status=400)
 			try:
 				b = models.Employee.objects.get(id=data.get('id'))
+				check_user_access(request,b)
 			except models.Employee.DoesNotExist:
 				return HttpResponse(status=404)
+			except BadAccess as b:
+				return HttpResponse(b,status=401)
 
 			serializer = serializers.EmployeeSerializer(b,data=data,partial=True)
 			if serializer.is_valid():
@@ -278,11 +280,15 @@ def employee(request):
 			data = JSONParser().parse(request)#parse incoming data
 			try:
 				b = models.Employee.objects.get(id=data.get('id'))
+				check_user_access(request,b)
 				serializer = serializers.EmployeeSerializer(b)
 				b.delete()
 				return JSONResponse(serializer.data,status=200)
 			except models.Employee.DoesNotExist:
 				return HttpResponse(status=404)
+			except BadAccess as b:
+				return HttpResponse(b,status=401)
+
 		return JSONResponse(serializer.errors, status=400)
 	elif query_type == "list":#is list
 		if request.method == 'POST':#parse csv locally
@@ -307,7 +313,11 @@ def employee(request):
 					return  HttpResponse(status=400)
 				try:
 					b = models.Employee.objects.get(id=data.get('id'))
+					check_user_access(request,b)
 				except models.Employee.DoesNotExist:
+					continue
+				except BadAccess as b:
+					print "bad access"
 					continue
 				serializer = serializers.EmployeeSerializer(b,data=data,partial=True)
 				if serializer.is_valid():
@@ -332,10 +342,14 @@ def employee(request):
 			for idcode in data.get('employees'):
 				try:
 					b = models.Employee.objects.get(id=idcode)
+					check_user_access(request,b)
 					serializer = serializers.EmployeeSerializer(b)
 					response.append(serializer.data)
 					b.delete()
 				except models.Employee.DoesNotExist:
+					continue
+				except BadAccess as b:
+					print "bad access"
 					continue
 			if(len(response) is 0):
 				return HttpResponse(status=404)
@@ -390,7 +404,8 @@ def group(request):#get groups, delete groups.
 				for group in data:
 					try:
 						b = models.Group.objects.get(id=group)
-						employees = models.Employee.objects.filter(groups=b)
+						check_user_access(request,b)
+						# employees = models.Employee.objects.filter(groups=b)
 						# for e in employees:
 						# 	e.groups.remove(b)#remove group from all employees
 						# billboards = models.Billboard.objects.filter(groups=b)
@@ -400,6 +415,9 @@ def group(request):#get groups, delete groups.
 						b.delete()
 						response.append(serializer.data)
 					except models.Group.DoesNotExist:
+						continue
+					except BadAccess as b:
+						print "bad access"
 						continue
 				if(len(response) is 0):
 					return JSONResponse(data, status=404)
@@ -427,6 +445,7 @@ def group(request):#get groups, delete groups.
 				try:
 					response = {}
 					b = models.Group.objects.get(id=request.query_params.get('id'))
+					check_user_access(request,b)
 					serializer = serializers.GroupSerializer(b)
 					response["group"] = serializer.data
 					e = models.Employee.objects.filter(groups=b.id)
@@ -435,12 +454,17 @@ def group(request):#get groups, delete groups.
 					return JSONResponse(response, status=200)
 				except models.Group.DoesNotExist:
 					return HttpResponse(status=404)
+				except BadAccess as b:
+					return HttpResponse(b,status=401)
 		elif request.method == 'PUT':
 			data = JSONParser().parse(request)#parse incoming data
 			try:
 				b = models.Group.objects.get(id=data.get('id'))
+				check_user_access(request,b)
 			except models.Group.DoesNotExist:
 				return HttpResponse(status=404)
+			except BadAccess as b:
+				return HttpResponse(b,status=401)
 			disallowed = ["company",]
 			data = disallowChanges(disallowed,data)
 			serializer = serializers.GroupSerializer(b,data=data,partial=True)
@@ -451,6 +475,7 @@ def group(request):#get groups, delete groups.
 			data = JSONParser().parse(request)#parse incoming data
 			try:
 				b = models.Group.objects.get(id=data.get('id'))
+				check_user_access(request,b)
 				#this removal should be automatic
 				# employees = models.Employee.objects.filter(groups=b)
 				# for e in employees:
@@ -463,6 +488,8 @@ def group(request):#get groups, delete groups.
 				return JSONResponse(serializer.data, status=200)
 			except models.Group.DoesNotExist:
 				return JSONResponse(data,status=404)
+			except BadAccess as b:
+				return HttpResponse(b,status=401)
 		return JSONResponse(serializer.errors, status=400)
 	else:
 		return HttpResponse(status=404)
