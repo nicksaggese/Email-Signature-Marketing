@@ -12,6 +12,11 @@ class User(Django_User):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     confirmed = models.BooleanField(default=False)
     timezone = models.CharField(max_length=200, default='US/Eastern')
+    class Meta:
+        permissions = (
+            ("full_user", "Can CRUD other full users."),
+            ("half_user", "Can CRUD itself."),
+        )
 class Group(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     name = models.CharField(max_length=150)

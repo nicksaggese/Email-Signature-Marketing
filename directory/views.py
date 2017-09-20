@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from robinboardAPI.permissions import check_user_access, BadAccess
+from django.contrib.auth import models as auth_models
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from rest_framework.renderers import JSONRenderer
@@ -19,39 +20,14 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 
-from .helpers import disallowChanges
+from .helpers import disallowChanges, JSONResponse, domainFromEmail, checkEmail, processUserReturn, generateConfirmCode
 
 import os
 from . import userEmails
 
 # Create your views here.
-class JSONResponse(HttpResponse):
-	"""
-	An HttpResponse that renders its content into JSON.
-	"""
-	def __init__(self, data, **kwargs):
-		content = JSONRenderer().render(data)
-		kwargs['content_type'] = 'application/json'
-		super(JSONResponse, self).__init__(content, **kwargs)
 
-def domainFromEmail(email):
-	domain = re.search("@[\w.]+", email)
-	domain = domain.group(0)[1:]#first in group, remove @
-	return domain
-def checkEmail(data,request):
-	email = data.get('email')
-	company = request.user.user.company.id
-	if email is not None:
-		domain = domainFromEmail(email)
-		company = models.Company.objects.get(id=company)#get company for compare
-		if(domain != company.domain):
-			return False
-	return True
-# Create your views here.
-import hashlib
-def generateConfirmCode(email,first,last):
-	string = str(email)+str(first)+str(last)+str(os.environ.get('CONFIRM_EMAIL_SECRET'))
-	return hashlib.md5(string).hexdigest()
+
 @api_view(['POST'])
 @permission_classes((AllowAny, ))
 def initialize(request):#send in combo of nested user and email
@@ -84,10 +60,16 @@ def initialize(request):#send in combo of nested user and email
 					confirmCode = generateConfirmCode(email,first_name,last_name)
 					userEmails.RequestUserConfirm(email,confirmCode)
 
-					disallowed = ["is_staff","is_active","is_superuser","confirmed","password"]
-					data = disallowChanges(disallowed,serializer.data)
+					u = models.User.objects.get(email = email)
+					full_user = auth_models.Permission.objects.get(codename="full_user")
+					print full_user
 
-					return JSONResponse(data, status=200)#success in creating the resource
+					u.user_permissions.add(full_user)
+					# disallowed = ["is_staff","is_active","is_superuser","confirmed","password","user_permissions","groups"]
+					# data = disallowChanges(disallowed,serializer.data)
+					#
+					# data["permissions"] = "full_user"
+					return JSONResponse(processUserReturn(u), status=200)#success in creating the resource
 				else:
 					c.delete()#remove company because user failed
 			except Exception as e:
@@ -155,7 +137,7 @@ def company(request):
 		if serializer.is_valid():
 			serializer.save()
 			return JSONResponse(serializer.data, status=200)
-	elif request.method == 'DELETE':
+	elif request.method == 'DELETE':#TODO MAKE SURE ONLY 1 FULL USER LEFT BEFORE DELETE
 		data = JSONParser().parse(request)#parse incoming data
 		try:
 			c = request.user.user.company
@@ -171,37 +153,75 @@ def company(request):
 
 @api_view(['POST','GET','PUT','DELETE'])
 def user(request):
-	# if request.method == 'POST':
-	# 	data = JSONParser().parse(request)#parse incoming data
-	# 	if(not checkEmail(data,request)):
-	# 		return  HttpResponse(status=400)
-	# 	#domain and email domain are same
-	# 	#create company
-	# 	serializer = serializers.UserSerializer(data=data)
-	# 	if serializer.is_valid():
-	# 		serializer.save()
+	if request.method == 'POST':
+		if(not request.user.has_perm('full_user')):
+			return HttpResponse("You cannot create new admins.",status=401)
+		data = JSONParser().parse(request)#parse incoming data
+		data["company"] = request.user.user.company.id#set company to current user
+
+		if(not checkEmail(data,request)):
+			return  HttpResponse(status=400)
+		permission = data.get('permission',"half_user")
+
+		serializer = serializers.UserSerializer(data=data)
+		if serializer.is_valid():
+			serializer.save()
+			try:
+				b=models.User.objects.get(email=data.get("email"))
+				#provision permission
+				if(permission == "full_user"):
+					permission = auth_models.Permission.objects.get(codename="full_user")
+				else:
+					permission = auth_models.Permission.objects.get(codename="half_user")
+				b.permission_classes.add(permission)
+				return JSONResponse(processUserReturn(b),status=200)
+			except Exception as e:
+				return HttpResponse(e,status=500)
+
 	if request.method == 'GET':#add sanitized list later, for now just get active user #TODO
 		query_type = request.query_params.get("type")
-		if(query_type == "current"):
+		if(query_type == "current" or "single"):
 			try:
 				b = request.user.user
-				serializer = serializers.UserSerializer(b)
+				if query_type == "single":
+					if(not request.user.has_perm('full_user')):
+						return HttpResponse("You cannot access other users.",status=401)
+					b = request.query_params.get('id')
+					b = models.User.objects.get(id=b)
 
-				#sanitize user
-				d = (serializer.data)
-				disallowed = ["password"]
-				d = disallowChanges(disallowed,d)
+				# serializer = serializers.UserSerializer(b)
+				#
+				# #sanitize user
+				# d = (serializer.data)
+				# disallowed = ["is_staff","is_superuser","password","user_permissions","groups"]
+				# d = disallowChanges(disallowed,d)
+				# #communicate permissions
+				# if(b.has_perm('full_user')):
+				# 	d["permissions"] = 'full_user'
+				# else:
+				# 	d["permissions"] = 'half_user'
 
-				return JSONResponse(d, status=200)
+				return JSONResponse(processUserReturn(b), status=200)
 			except models.User.DoesNotExist:
 				return HttpResponse(status=404)
-		elif(query_type == "list"):#list
-			return HttpResponse(status=404)
-		else:#list
+		elif(query_type == "list"):#list all users at company
+			try:
+				company = request.user.user.company
+				users = models.User.objects.filter(company=company)
+				response = []
+				for user in users:
+					response.append(processUserReturn(user))
+				return JSONResponse(response, status=200)
+			except models.User.DoesNotExist:
+				return HttpResponse(status=404)
+		else:
 			return HttpResponse(status=404)
 	elif request.method == 'PUT':#only current user #need ability to change this to edit other users.. or at least create, delete, promote, demote
+		#current
+		#promote
+		#demote
 		data = JSONParser().parse(request)#parse incoming data
-		disallowed = ["is_staff","is_active","is_superuser","confirmed"]
+		disallowed = ["is_staff","is_active","is_superuser","confirmed","user_permissions","groups"]
 		data = disallowChanges(disallowed,data)
 		if(not checkEmail(data,request)):
 			return  HttpResponse(status=400)
@@ -213,8 +233,8 @@ def user(request):
 		serializer = serializers.UserSerializer(b,data=data,partial=True)
 		if serializer.is_valid():
 			serializer.save()
-			return JSONResponse(serializer.data, status=200)
-	# elif request.method == 'DELETE':
+			return JSONResponse(processUserReturn(b), status=200)
+	# elif request.method == 'DELETE':#cannot delete current if no other full user... or deletes company
 	# 	try:
 	# 		b = models.User.objects.get(id=request.query_params['id'])
 	# 		b.delete()
