@@ -83,7 +83,7 @@ def initialize(request):#send in combo of nested user and email
 					last_name = data.get('user').get('last_name')
 					confirmCode = generateConfirmCode(email,first_name,last_name)
 					userEmails.RequestUserConfirm(email,confirmCode)
-					
+
 					disallowed = ["is_staff","is_active","is_superuser","confirmed","password"]
 					data = disallowChanges(disallowed,serializer.data)
 
@@ -117,17 +117,23 @@ def confirmUser(request):
 			return redirect("https://app.robinboard.com/confirmed",permanent=True)#redirect to app
 		else:
 			return HttpResponse("invalid code.",status=403)
+from django.contrib.auth.models import User
+from django.contrib.auth import hashers
 @api_view(['POST',])
 @permission_classes((AllowAny, ))
 def forgotPassword(request):
 	if request.method == 'POST':
 		data = JSONParser().parse(request)#parse incoming data
-		u = models.User.objects.get(email=data["email"])
-		temp_pass =  models.User.make_random_password()
-		u.password = make_password(temp_pass)
+		try:
+			u = models.User.objects.get(email=data["email"])
+		except models.User.DoesNotExist:
+			return HttpResponse("User not found.",status=404)
+		temp_pass =  User.objects.make_random_password()
+		u.password = hashers.make_password(temp_pass)
 		#send password email
 		userEmails.forgotPassword(u,temp_pass)
-		return redirect('https://app.robinboard.com/login')
+		return HttpResponse(status=200)
+	return HttpResponse(status=404)
 
 @api_view(['POST','GET','PUT','DELETE'])
 def company(request):

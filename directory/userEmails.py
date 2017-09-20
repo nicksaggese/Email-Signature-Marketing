@@ -2,7 +2,7 @@ from django.core.mail import send_mail
 def forgotPassword(user,temp_pass):
     try:
         subject = "Robinboard Password Reset Request"
-        message = "Your temporary password is: " + temp_pass
+        message = "Your temporary password is: " + temp_pass + " \nLogin with " + user.email + "at https://app.robinboard.com/login/"
         fromEmail = "support@robinboard.com"
         to = [user.email,]
         send_mail(subject,message,fromEmail,to,fail_silently=False)
