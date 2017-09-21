@@ -20,7 +20,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 
-from .helpers import disallowChanges, JSONResponse, domainFromEmail, checkEmail, processUserReturn, generateConfirmCode
+from .helpers import disallowChanges, JSONResponse, domainFromEmail, checkEmail, processUserReturn, generateConfirmCode, userConfirmSequence
 
 import os
 from . import userEmails
@@ -57,8 +57,7 @@ def initialize(request):#send in combo of nested user and email
 					email = data.get('user').get('email')
 					first_name = data.get('user').get('first_name')
 					last_name = data.get('user').get('last_name')
-					confirmCode = generateConfirmCode(email,first_name,last_name)
-					userEmails.RequestUserConfirm(email,confirmCode)
+					userConfirmSequence(email,first_name,last_name, None)
 
 					u = models.User.objects.get(email = email)
 					full_user = auth_models.Permission.objects.get(codename="full_user")
@@ -158,7 +157,8 @@ def user(request):
 			return HttpResponse("You cannot create new admins.",status=401)
 		data = JSONParser().parse(request)#parse incoming data
 		data["company"] = request.user.user.company.id#set company to current user
-
+		temp_pass =  User.objects.make_random_password()
+		data["password"] = make_password(temp_pass)
 		if(not checkEmail(data,request)):
 			return  HttpResponse(status=400)
 		permission = data.get('permission',"half_user")
@@ -174,6 +174,7 @@ def user(request):
 				else:
 					permission = auth_models.Permission.objects.get(codename="half_user")
 				b.permission_classes.add(permission)
+				userConfirmSequence(b.email,b.first,b.last,temp_pass)#setup confirm email for new user
 				return JSONResponse(processUserReturn(b),status=200)
 			except Exception as e:
 				return HttpResponse(e,status=500)

@@ -50,3 +50,7 @@ import hashlib,os
 def generateConfirmCode(email,first,last):
 	string = str(email)+str(first)+str(last)+str(os.environ.get('CONFIRM_EMAIL_SECRET'))
 	return hashlib.md5(string).hexdigest()
+from . import userEmails
+def userConfirmSequence(email,first,last):
+	confirmCode = generateConfirmCode(email,first,last)
+	userEmails.RequestUserConfirm(email,confirmCode,tempPass)

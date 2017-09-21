@@ -10,11 +10,11 @@ def forgotPassword(user,temp_pass):
     except smtplib.SMTPException:
         return False
 
-def RequestUserConfirm(email,confirmCode):
-    print "in here"
+def RequestUserConfirm(email,confirmCode,temp_pass):
     subject = "Robinboard Confirm Email and Company Domain"
     message = "<a href=\"http://localhost:8000/directory/confirm-user/?confirmCode=" + confirmCode + "&email=" + email + "\">Click to confirm your account and company domain with Robinboard.</a>"
-    print message
+    if(temp_pass is not None):
+        message = message + "\nYour temporary password is: " + temp_pass
     fromEmail = "support@robinboard.com"
     to = [email,]
     send_mail(subject,message,fromEmail,to,fail_silently=False)
