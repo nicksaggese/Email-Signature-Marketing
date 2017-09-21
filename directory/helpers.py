@@ -8,6 +8,8 @@ from dateutil import parser as datetime_parser
 def userDateParse(request,dateString):
     return datetime_parser.parse(dateString, tzinfos={pytz.timezone(request.user.user.timezone)})
 from django.http import HttpResponse
+from rest_framework.renderers import JSONRenderer
+
 class JSONResponse(HttpResponse):
 	"""
 	An HttpResponse that renders its content into JSON.
@@ -51,6 +53,6 @@ def generateConfirmCode(email,first,last):
 	string = str(email)+str(first)+str(last)+str(os.environ.get('CONFIRM_EMAIL_SECRET'))
 	return hashlib.md5(string).hexdigest()
 from . import userEmails
-def userConfirmSequence(email,first,last):
+def userConfirmSequence(email,first,last,tempPass):
 	confirmCode = generateConfirmCode(email,first,last)
 	userEmails.RequestUserConfirm(email,confirmCode,tempPass)

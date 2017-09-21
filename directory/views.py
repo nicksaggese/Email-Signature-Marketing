@@ -153,10 +153,11 @@ def company(request):
 @api_view(['POST','GET','PUT','DELETE'])
 def user(request):
 	if request.method == 'POST':
-		if(not request.user.has_perm('full_user')):
+		if(not request.user.has_perm('directory.full_user')):
 			return HttpResponse("You cannot create new admins.",status=401)
 		data = JSONParser().parse(request)#parse incoming data
 		data["company"] = request.user.user.company.id#set company to current user
+		data['username'] = data.get('email')
 		temp_pass =  User.objects.make_random_password()
 		data["password"] = make_password(temp_pass)
 		if(not checkEmail(data,request)):
@@ -169,15 +170,20 @@ def user(request):
 			try:
 				b=models.User.objects.get(email=data.get("email"))
 				#provision permission
+			except models.User.DoesNotExist:
+				return HttpResponse("user didn't save properly.",status=404)
+			try:
 				if(permission == "full_user"):
 					permission = auth_models.Permission.objects.get(codename="full_user")
 				else:
 					permission = auth_models.Permission.objects.get(codename="half_user")
-				b.permission_classes.add(permission)
-				userConfirmSequence(b.email,b.first,b.last,temp_pass)#setup confirm email for new user
+				b.user_permissions.add(permission)
+				userConfirmSequence(b.email,b.first_name,b.last_name,temp_pass)#setup confirm email for new user
 				return JSONResponse(processUserReturn(b),status=200)
 			except Exception as e:
+				b.delete()
 				return HttpResponse(e,status=500)
+
 
 	if request.method == 'GET':#add sanitized list later, for now just get active user #TODO
 		query_type = request.query_params.get("type")
@@ -185,7 +191,7 @@ def user(request):
 			try:
 				b = request.user.user
 				if query_type == "single":
-					if(not request.user.has_perm('full_user')):
+					if(not request.user.has_perm('directory.full_user')):
 						return HttpResponse("You cannot access other users.",status=401)
 					b = request.query_params.get('id')
 					b = models.User.objects.get(id=b)
@@ -211,6 +217,7 @@ def user(request):
 		full_user = auth_models.Permission.objects.get(codename="full_user")
 		half_user = auth_models.Permission.objects.get(codename="half_user")
 		#current
+		print "here"
 		if(data.get('type') == "current"):
 			if(not checkEmail(data,request)):
 				return  HttpResponse(status=400)
@@ -224,36 +231,39 @@ def user(request):
 				return JSONResponse(processUserReturn(b), status=200)
 		#promote
 		elif(data.get('type') == "promote"):
+			print "in here"
 			if(not request.user.has_perm('directory.full_user')):
 				return HttpResponse("You cannot access other users.",status=401)
 			try:
-				b = models.User.get(id=data.get('id'),company=request.user.user.company)#no check needed
+				b = models.User.objects.get(id=data.get('id'),company=request.user.user.company)#no check needed
 			except models.User.DoesNotExist:
 				return HttpResponse("user does not exist.",status=404)
+			print b.has_perm('directory.full_user')
 			if(b.has_perm('directory.full_user')):
 				return HttpResponse("User already fully promoted.", status=406)
-			b.permission_classes.add(full_user)
-			b.permission_classes.remove(half_user)
+			b.user_permissions.add(full_user)
+			b.user_permissions.remove(half_user)
 			return JSONResponse(processUserReturn(b), status=200)
 
 		#demote
 		elif(data.get('type') == "demote"):
-			if(not request.user.has_perm('full_user')):
+			if(not request.user.user.has_perm('directory.full_user')):
 				return HttpResponse("You cannot access other users.",status=401)
 			try:
-				b = models.User.get(id=data.get('id'),company=request.user.user.company)#no check needed
+				b = models.User.objects.get(id=data.get('id'),company=request.user.user.company)#no check needed
 			except models.User.DoesNotExist:
 				return HttpResponse("user does not exist.",status=404)
-			if(b.has_perm('directory.full_user')):
-				return HttpResponse("User already fully promoted.", status=406)
-			b.permission_classes.add(half_user)
-			b.permission_classes.remove(full_user)
+			if(b.has_perm('directory.half_user')):
+				return HttpResponse("User already fully demoted.", status=406)
+			b.user_permissions.add(half_user)
+			b.user_permissions.remove(full_user)
 			return JSONResponse(processUserReturn(b), status=200)
 		else:
 			return HttpResponse(status=404)
 		return HttpResponse(status=404)
 
 	elif request.method == 'DELETE':#cannot delete current if no other full user... or deletes company
+		data = JSONParser().parse(request)
 		if(data.get('type') == "current"):
 			try:
 				u = request.user.user
@@ -268,10 +278,12 @@ def user(request):
 				u.delete()
 				return JSONResponse(r,status=200)
 		elif(data.get('type') == "other"):
-			if(not request.user.has_perm('full_user')):
+			if(not request.user.has_perm('directory.full_user')):
 				return HttpResponse("You cannot access other users.",status=401)
 			try:
 				b = models.User.objects.get(id=data.get('id'),company=request.user.user.company)
+				if(b == request.user.user):
+					return HttpResponse("Wrong route to delete current user, use type=current",status=406)
 				b.delete()
 			except models.User.DoesNotExist:
 				return HttpResponse(status=404)
