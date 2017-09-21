@@ -188,19 +188,6 @@ def user(request):
 						return HttpResponse("You cannot access other users.",status=401)
 					b = request.query_params.get('id')
 					b = models.User.objects.get(id=b)
-
-				# serializer = serializers.UserSerializer(b)
-				#
-				# #sanitize user
-				# d = (serializer.data)
-				# disallowed = ["is_staff","is_superuser","password","user_permissions","groups"]
-				# d = disallowChanges(disallowed,d)
-				# #communicate permissions
-				# if(b.has_perm('full_user')):
-				# 	d["permissions"] = 'full_user'
-				# else:
-				# 	d["permissions"] = 'half_user'
-
 				return JSONResponse(processUserReturn(b), status=200)
 			except models.User.DoesNotExist:
 				return HttpResponse(status=404)
@@ -217,30 +204,85 @@ def user(request):
 		else:
 			return HttpResponse(status=404)
 	elif request.method == 'PUT':#only current user #need ability to change this to edit other users.. or at least create, delete, promote, demote
-		#current
-		#promote
-		#demote
 		data = JSONParser().parse(request)#parse incoming data
 		disallowed = ["is_staff","is_active","is_superuser","confirmed","user_permissions","groups"]
 		data = disallowChanges(disallowed,data)
-		if(not checkEmail(data,request)):
-			return  HttpResponse(status=400)
-		try:
-			b = request.user.user
+		full_user = auth_models.Permission.objects.get(codename="full_user")
+		half_user = auth_models.Permission.objects.get(codename="half_user")
+		#current
+		if(data.get('type') == "current"):
+			if(not checkEmail(data,request)):
+				return  HttpResponse(status=400)
+			try:
+				b = request.user.user
+			except models.User.DoesNotExist:
+				return HttpResponse("no current user",status=404)
+			serializer = serializers.UserSerializer(b,data=data,partial=True)
+			if serializer.is_valid():
+				serializer.save()
+				return JSONResponse(processUserReturn(b), status=200)
+		#promote
+		elif(data.get('type') == "promote"):
+			if(not request.user.has_perm('directory.full_user')):
+				return HttpResponse("You cannot access other users.",status=401)
+			try:
+				b = models.User.get(id=data.get('id'),company=request.user.user.company)#no check needed
+			except models.User.DoesNotExist:
+				return HttpResponse("user does not exist.",status=404)
+			if(b.has_perm('directory.full_user')):
+				return HttpResponse("User already fully promoted.", status=406)
+			b.permission_classes.add(full_user)
+			b.permission_classes.remove(half_user)
+			return JSONResponse(processUserReturn(b), status=200)
 
+		#demote
+		elif(data.get('type') == "demote"):
+			if(not request.user.has_perm('full_user')):
+				return HttpResponse("You cannot access other users.",status=401)
+			try:
+				b = models.User.get(id=data.get('id'),company=request.user.user.company)#no check needed
+			except models.User.DoesNotExist:
+				return HttpResponse("user does not exist.",status=404)
+			if(b.has_perm('directory.full_user')):
+				return HttpResponse("User already fully promoted.", status=406)
+			b.permission_classes.add(half_user)
+			b.permission_classes.remove(full_user)
+			return JSONResponse(processUserReturn(b), status=200)
+		else:
+			return HttpResponse(status=404)
+		return HttpResponse(status=404)
+
+	elif request.method == 'DELETE':#cannot delete current if no other full user... or deletes company
+		if(data.get('type') == "current"):
+			try:
+				u = request.user.user
+			except models.User.DoesNotExist:
+				return HttpResponse("Current user DNE.",status=404)
+			full_user = auth_models.Permission.objects.get(codename="full_user")
+			users = models.User.objects.filter(company=u.company,user_permissions=full_user).count()
+			if((users < 1) and u.has_perm('directory.full_user')):
+				return HttpResponse("No other admin users. Must promote another admin before deletion.",status=406)
+			else:
+				r = processUserReturn(u)
+				u.delete()
+				return JSONResponse(r,status=200)
+		elif(data.get('type') == "other"):
+			if(not request.user.has_perm('full_user')):
+				return HttpResponse("You cannot access other users.",status=401)
+			try:
+				b = models.User.objects.get(id=data.get('id'),company=request.user.user.company)
+				b.delete()
+			except models.User.DoesNotExist:
+				return HttpResponse(status=404)
+		else:
+			return HttpResponse(status=404)
+
+		try:
+			b = models.User.objects.get(id=data.get('id'),company=request.user.user.company)
+			b.delete()
 		except models.User.DoesNotExist:
 			return HttpResponse(status=404)
-		serializer = serializers.UserSerializer(b,data=data,partial=True)
-		if serializer.is_valid():
-			serializer.save()
-			return JSONResponse(processUserReturn(b), status=200)
-	# elif request.method == 'DELETE':#cannot delete current if no other full user... or deletes company
-	# 	try:
-	# 		b = models.User.objects.get(id=request.query_params['id'])
-	# 		b.delete()
-	# 	except models.User.DoesNotExist:
-	# 		return HttpResponse(status=404)
-	# return JSONResponse(serializer.errors, status=400)
+	return JSONResponse(serializer.errors, status=400)
 
 
 import xxhash, random
