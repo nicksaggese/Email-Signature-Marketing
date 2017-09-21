@@ -1,3 +1,8 @@
+import xxhash, random
+def createEmployeeURL(employee):
+    return xxhash.xxh64(employee.get('first')+employee.get('last')+employee.get('email')+str(random.randint(1,1000))).hexdigest()
+def createUserURL(user):
+	return xxhash.xxh64(user.get('first_name')+user.get('last_name')+user.get('email')+user.get('phone_number')+str(random.randint(1,1000))).hexdigest()
 def disallowChanges(disallowed,data):
 	for d in disallowed:
 		data.pop(d,None)

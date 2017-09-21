@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from robinboardAPI.permissions import check_user_access, BadAccess
-from django.contrib.auth import models as auth_models
+
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
-from rest_framework.renderers import JSONRenderer
+# from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser, FormParser
 from rest_framework.decorators import api_view,permission_classes
 from . import models
 from . import serializers
 
-from campaigns.models import Billboard
-
 from rest_framework import permissions
 from rest_framework.permissions import AllowAny
-import re
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
+from django.contrib.auth import models as auth_models
 
-from .helpers import disallowChanges, JSONResponse, domainFromEmail, checkEmail, processUserReturn, generateConfirmCode, userConfirmSequence
+from .helpers import disallowChanges, JSONResponse, domainFromEmail, checkEmail, processUserReturn
+from .helpers import generateConfirmCode, userConfirmSequence, createEmployeeURL, createUserURL
 
 import os
 from . import userEmails
@@ -49,6 +48,7 @@ def initialize(request):#send in combo of nested user and email
 				data['user']['company'] = c.id
 				data['user']['username'] = data.get('user').get('email')
 				data['user']['password'] = make_password(data.get('user').get('password'))#necessary for serializers
+				data["user"]["url"] = createUserURL(data["user"])
 				serializer = serializers.UserSerializer(data=data.get('user'))
 				if serializer.is_valid():
 					serializer.save()
@@ -163,7 +163,7 @@ def user(request):
 		if(not checkEmail(data,request)):
 			return  HttpResponse(status=400)
 		permission = data.get('permission',"half_user")
-
+		data["url"] = createUserURL(data)
 		serializer = serializers.UserSerializer(data=data)
 		if serializer.is_valid():
 			serializer.save()
@@ -194,10 +194,11 @@ def user(request):
 					if(not request.user.has_perm('directory.full_user')):
 						return HttpResponse("You cannot access other users.",status=401)
 					b = request.query_params.get('id')
-					b = models.User.objects.get(id=b)
+					b = models.User.objects.get(id=b, company=request.user.user.company)
 				return JSONResponse(processUserReturn(b), status=200)
 			except models.User.DoesNotExist:
 				return HttpResponse(status=404)
+
 		elif(query_type == "list"):#list all users at company
 			try:
 				company = request.user.user.company
@@ -212,7 +213,7 @@ def user(request):
 			return HttpResponse(status=404)
 	elif request.method == 'PUT':#only current user #need ability to change this to edit other users.. or at least create, delete, promote, demote
 		data = JSONParser().parse(request)#parse incoming data
-		disallowed = ["is_staff","is_active","is_superuser","confirmed","user_permissions","groups"]
+		disallowed = ["is_staff","is_active","is_superuser","confirmed","user_permissions","groups","url"]
 		data = disallowChanges(disallowed,data)
 		full_user = auth_models.Permission.objects.get(codename="full_user")
 		half_user = auth_models.Permission.objects.get(codename="half_user")
@@ -296,11 +297,6 @@ def user(request):
 		except models.User.DoesNotExist:
 			return HttpResponse(status=404)
 	return JSONResponse(serializer.errors, status=400)
-
-
-import xxhash, random
-def createEmployeeURL(employee):
-    return xxhash.xxh64(employee.get('first')+employee.get('last')+employee.get('email')+str(random.randint(1,1000))).hexdigest()
 
 #add edit delete individual Employee
 @api_view(['POST','GET','PUT','DELETE'])
@@ -432,32 +428,6 @@ def employee(request):
 	else:
 		return HttpResponse(status=404)
 
-# def groupEmployees(request):
-# 	if request.method == 'PUT':#add employees to groups
-# 	elif request.method == 'DELETE':#remove employees from group
-# 	else:
-# 		return HttpResponse(status=404)
-# @api_view(['PUT',])
-# @permission_classes((StandardUserPermissions,))
-# def removeFromGroup(request):#removes a list of employees from a group
-# 	if request.method == 'PUT':
-# 		data = JSONParser().parse(request)#parse incoming data
-# 		try:
-# 			for group in data['groups']:
-# 				g = models.Group.objects.get(id=group.id)
-# 				for employee in group.employees:
-# 					e = models.Employee.objects.get(id=employee.id)
-# 					e.groups.remove(g)#remove from groups fields
-# 			return HttpResponse(status=200)
-# 		except models.Group.DoesNotExist:
-# 			return HttpResponse(status=404)
-# 		except models.Employee.DoesNotExist:
-# 			return HttpResponse(status=404)
-#
-# @api_view(['PUT',])
-# @permission_classes((StandardUserPermissions,))
-# def addToGroups(request):
-# 	pass
 @api_view(['POST','GET','PUT','DELETE'])
 def group(request):#get groups, delete groups.
 	query_type = request.query_params.get('type')
@@ -478,12 +448,6 @@ def group(request):#get groups, delete groups.
 					try:
 						b = models.Group.objects.get(id=group)
 						check_user_access(request,b)
-						# employees = models.Employee.objects.filter(groups=b)
-						# for e in employees:
-						# 	e.groups.remove(b)#remove group from all employees
-						# billboards = models.Billboard.objects.filter(groups=b)
-						# for c in billboards:
-						# 	c.groups.remove(b)#remove group from associated campaigns
 						serializer = serializers.GroupSerializer(b)
 						b.delete()
 						response.append(serializer.data)
@@ -549,13 +513,6 @@ def group(request):#get groups, delete groups.
 			try:
 				b = models.Group.objects.get(id=data.get('id'))
 				check_user_access(request,b)
-				#this removal should be automatic
-				# employees = models.Employee.objects.filter(groups=b)
-				# for e in employees:
-				# 	e.groups.remove(b)#remove group from all employees
-				# billboards = models.Billboard.objects.filter(groups=b)
-				# for c in billboards:
-				# 	c.groups.remove(b)#remove group from associated campaigns
 				serializer = serializers.GroupSerializer(b)
 				b.delete()
 				return JSONResponse(serializer.data, status=200)

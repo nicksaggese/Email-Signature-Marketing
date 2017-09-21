@@ -12,6 +12,8 @@ class User(Django_User):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     confirmed = models.BooleanField(default=False)
     timezone = models.CharField(max_length=200, default='US/Eastern')
+    phone_number = models.CharField(max_length=15)
+    url = models.CharField(max_length=2500, unique=True)
     class Meta:
         permissions = (
             ("full_user", "Can CRUD other full users."),

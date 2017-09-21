@@ -23,7 +23,7 @@ class JSONResponse(HttpResponse):
 def billboard(request):
     if request.method == 'GET':
         try:
-            b = campaign_billboard.objects.get(id=request.query_params.get("id"))
+            b = campaign_billboard.objects.get(id=request.query_params.get("id"),company=request.user.user.company)
         except campaign_billboard.DoesNotExist:
             return HttpResponse(status=404)
 

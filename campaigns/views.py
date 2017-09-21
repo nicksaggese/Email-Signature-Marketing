@@ -102,7 +102,7 @@ def billboardPhoto(request):
 	elif request.method == 'PUT':#add photo to billboard
 		data = JSONParser().parse(request)#parse incoming data
 		try:
-			billboard = models.Billboard.objects.get(id=data.get('billboard'))
+			billboard = models.Billboard.objects.get(id=data.get('billboard'),company=request.user.user.company)
 			check_user_access(request,billboard)
 		except models.Billboard.DoesNotExist:
 			return HttpResponse("No billboard at " + str(data.get('billboard')),status=404)
@@ -157,12 +157,9 @@ def billboardMedia(request):
 		disallowed = ["company","billboard","photo"]
 		data = disallowChanges(disallowed,data)
 		try:
-			b = models.BillboardMedia.objects.get(id=data.get("id"))
-			check_user_access(request,b)
+			b = models.BillboardMedia.objects.get(id=data.get("id"),company=request.user.user.company)
 		except models.BillboardMedia.DoesNotExist:
 			return HttpResponse(data,status=404)
-		except BadAccess as e:
-			return HttpResponse(e,status=401)
 		serializer = serializers.BillboardMediaSerializer(b,data=data,partial=True)
 		if serializer.is_valid():
 			serializer.save()
@@ -170,16 +167,13 @@ def billboardMedia(request):
 	elif request.method == 'DELETE':
 		data = JSONParser().parse(request)
 		try:
-			b = models.BillboardMedia.objects.get(id=data.get('id'))
-			check_user_access(request,b)
+			b = models.BillboardMedia.objects.get(id=data.get('id'),company=request.user.user.company)
 			#delete photo on imgur
 			serializer = serializers.BillboardMediaSerializer(b)
 			b.delete()#delete billboard
 			return JSONResponse(serializer.data,status=200)
 		except models.BillboardMedia.DoesNotExist:
 			return HttpResponse("No billboard media for this id",status=404)
-		except BadAccess as e:
-			return HttpResponse(e,status=401)
 	return JSONResponse(serializer.errors, status=400)
 @api_view(['POST','GET','DELETE'])
 def photo(request):
@@ -215,8 +209,7 @@ def photo(request):
 		elif request.method == 'DELETE':
 			data = JSONParser().parse(request)
 			try:
-				b = models.Photo.objects.get(id=data.get('id'))
-				check_user_access(request,b)
+				b = models.Photo.objects.get(id=data.get('id'),company=request.user.user.company)
 				#delete photo on imgur
 				serializer = serializers.PhotoSerializer(b)
 				imgur.deletePhotoImgur(b.imgurDeleteHash)
@@ -224,8 +217,6 @@ def photo(request):
 				return JSONResponse(serializer.data,status=200)
 			except models.Photo.DoesNotExist:
 				return HttpResponse("No photo for this id",status=404)
-			except BadAccess as e:
-				return HttpResponse(e,status=401)
 		return JSONResponse(serializer.errors, status=400)
 
 @api_view(['POST','GET','PUT','DELETE'])
@@ -256,8 +247,7 @@ def billboard(request):
 		elif request.method == 'GET':
 				response = {}
 				try:
-					b = models.Billboard.objects.get(id=request.query_params.get('id'))
-					check_user_access(request,b)
+					b = models.Billboard.objects.get(id=request.query_params.get('id'),company=request.user.user.company)
 					serializer = serializers.BillboardSerializer(b)
 					response["billboard"] = serializer.data
 					medias = models.BillboardMedia.objects.filter(billboard=b.id)
@@ -274,19 +264,14 @@ def billboard(request):
 					return JSONResponse(response, status=200)
 				except models.Billboard.DoesNotExist:
 					return HttpResponse("No billboard with this id",status=404)
-				except BadAccess as e:
-					return HttpResponse(e,status=401)
 		elif request.method == 'PUT':
 			data = JSONParser().parse(request)#parse incoming data
 			disallowed = ["company",]
 			data = disallowChanges(disallowed,data)
 			try:
-				b = models.Billboard.objects.get(id=data.get("id"))
-				check_user_access(request,b)
+				b = models.Billboard.objects.get(id=data.get("id"),company=request.user.user.company)
 			except models.Billboard.DoesNotExist:
 				return HttpResponse(data,status=404)
-			except BadAccess as e:
-				return HttpResponse(e,status=401)
 			#TODO convert to timezone aware
 			try:
 				start = data.get('start')
@@ -311,15 +296,12 @@ def billboard(request):
 		elif request.method == 'DELETE':
 			data = JSONParser().parse(request)#parse incoming data
 			try:
-				b = models.Billboard.objects.get(id=data.get('id'))
-				check_user_access(request,b)
+				b = models.Billboard.objects.get(id=data.get('id'),company=request.user.user.company)
 				serializer = serializers.BillboardSerializer(b)
 				b.delete()
 				return JSONResponse(serializer.data,status=200)
 			except models.Billboard.DoesNotExist:
 				return HttpResponse(data,status=404)
-			except BadAccess as e:
-				return HttpResponse(e,status=401)
 		else:
 			return HttpResponse(status=404)
 		return JSONResponse(serializer.errors, status=400)
@@ -336,16 +318,12 @@ def billboard(request):
 			response = []
 			for billboard in data:
 				try:
-					b = models.Billboard.objects.get(id=billboard)
-					check_user_access(request,b)
+					b = models.Billboard.objects.get(id=billboard,company=request.user.user.company)
 					serializer = serializers.BillboardSerializer(b)
 					b.delete()
 					response.append(serializer.data)
 				except models.Billboard.DoesNotExist:
 					continue#effectively do nothing
-				except BadAccess as e:
-					print # coding=utf-8
-					continue
 			if len(response) is 0:
 				return HttpResponse(data,status=404)
 			else:
