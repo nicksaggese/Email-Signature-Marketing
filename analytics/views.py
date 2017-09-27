@@ -8,6 +8,8 @@ from django.http import HttpResponse
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser, FormParser
 from rest_framework.decorators import api_view,permission_classes
+from rest_framework.permissions import AllowAny
+
 from . import models
 
 class JSONResponse(HttpResponse):
@@ -41,3 +43,23 @@ def billboard(request):
         return JSONResponse(data,status=200)
     else:
         return HttpResponse("No such billboard found",status=400)
+
+@api_view(['GET'])
+@permission_classes((AllowAny, ))
+def trackingPixel(request):
+	if request.method == "GET":
+		ref_chain = actions.getRefChain(request)
+		ref_type = request.query_params.get('ref_type')#employee, user, proprietary
+		ref_party = request.query_params.get('ref_party')#specific employee, user, proprietary
+		ref_page = request.query_params.get('ref_page')#page the request was made on
+		# ref_target # translate the page into the appropriate target, be it employee signup or company onboard
+		if(ref_type == "emp"):
+			actions.employeeReferral(ref_chain,request)
+		elif(ref_type == "user"):
+			actions.userReferral(ref_chain,request)
+		elif(ref_type == "prop"):#reengineer to use utm
+			actions.proprietaryReferral(ref_chain,request)
+		else:#pageview
+			actions.pageView(ref_chain,request)
+		return HttpResponse(status=200)#blank return
+	return HttpResponse(status=404)

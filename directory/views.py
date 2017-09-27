@@ -26,7 +26,6 @@ from . import userEmails
 
 # Create your views here.
 
-
 @api_view(['POST'])
 @permission_classes((AllowAny, ))
 def initialize(request):#send in combo of nested user and email
@@ -61,13 +60,9 @@ def initialize(request):#send in combo of nested user and email
 
 					u = models.User.objects.get(email = email)
 					full_user = auth_models.Permission.objects.get(codename="full_user")
-					print full_user
-
 					u.user_permissions.add(full_user)
-					# disallowed = ["is_staff","is_active","is_superuser","confirmed","password","user_permissions","groups"]
-					# data = disallowChanges(disallowed,serializer.data)
-					#
-					# data["permissions"] = "full_user"
+					#get referral code and submit initial referral tracking TODO
+					analytics_actions.companyOnboard(request,c)
 					return JSONResponse(processUserReturn(u), status=200)#success in creating the resource
 				else:
 					c.delete()#remove company because user failed
@@ -297,7 +292,9 @@ def user(request):
 		except models.User.DoesNotExist:
 			return HttpResponse(status=404)
 	return JSONResponse(serializer.errors, status=400)
-
+@api_view(['POST'])
+def onboardEmployee(request):
+	data = JSONParser().parse(request)#parse incoming data
 #add edit delete individual Employee
 @api_view(['POST','GET','PUT','DELETE'])
 def employee(request):

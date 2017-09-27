@@ -203,3 +203,6 @@ JWT_AUTH = {
     'JWT_AUTH_COOKIE': None,
 
 }
+
+#Session settings
+SESSION_COOKIE_AGE=2147483647#2^31 max val for 32 bit systems.
