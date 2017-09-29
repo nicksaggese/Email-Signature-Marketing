@@ -340,6 +340,7 @@ from urllib2 import urlopen
 @permission_classes((AllowAny, ))
 def display(request, employee_url):
 	if request.method == 'GET':
+		target = request.query_params.get('t')
 		#rate limiter funciton here TODO
 		try:
 			employee = employee_url
@@ -380,28 +381,32 @@ def display(request, employee_url):
 				cd.billboardMedia = media
 				cd.expires = datetime.now()+timedelta(hours=8)
 				cd.save()
-		analytics_actions.displayBillboard(request,employee,media)#record analytics
+		if(target == "r"):
+			analytics_actions.displayBillboardReferral(request,employee,media)#record analytics
+			ref_url = "https://i.imgur.com/5XiBoYm.png"#TODO UPDATE TO REAL LOGO
+			return redirect(ref_url,permanent=True)
+		elif(target == "c"):
+			analytics_actions.displayBillboard(request,employee,media)#record analytics
 
+			# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
+			if "via ggpht.com GoogleImageProxy" in str(request.META.get('HTTP_USER_AGENT')):#google coming in hot
+				ext = re.search("\.[a-z]{3}$",photo.imgurLink)
+				ctype = "image/jpg"
+				if(ext == ".png"):
+					ctype == "image/png"
+				elif(ext == ".gif"):
+					return HttpResponse("Image is type gif. Invalid to return.",status=404)
+				photo = urlopen(photo.imgurLink).read()
 
-		# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
-		if "via ggpht.com GoogleImageProxy" in str(request.META.get('HTTP_USER_AGENT')):#google coming in hot
-			ext = re.search("\.[a-z]{3}$",photo.imgurLink)
-			ctype = "image/jpg"
-			if(ext == ".png"):
-				ctype == "image/png"
-			elif(ext == ".gif"):
-				return HttpResponse("Image is type gif. Invalid to return.",status=404)
-			photo = urlopen(photo.imgurLink).read()
-
-			response = HttpResponse(photo, content_type=ctype)#will  break if gif...no gifs allowed!
-			response.status_code = 200
-		else:
-			response =  redirect(photo.imgurLink,permanent=True)
-			del response["Content-Type"]
-			response.status_code=302
-		response["Expires"] = -1
-		patch_cache_control(response, private=True,no_cache=True,no_store=True)
-		return response
+				response = HttpResponse(photo, content_type=ctype)#will  break if gif...no gifs allowed!
+				response.status_code = 200
+			else:
+				response =  redirect(photo.imgurLink,permanent=False)
+				del response["Content-Type"]
+				response.status_code=302
+			response["Expires"] = -1
+			patch_cache_control(response, private=True,no_cache=True,no_store=True)
+			return response
 	return HttpResponse(status=404)
 
 @api_view(['GET'])
@@ -419,27 +424,19 @@ def clickthrough(request):
 			print employee
 			return HttpResponse("No employee specified.",status=404)
 
-		cc = helpers.findCurrentCampaign(employee)
-		if(cc is None):
+		cd = models.CurrentDisplay.objects.get(employee = employee.id)
+		if(cd is None):
 			return redirect("https://"+employee.company.domain+"/")
 
-		medias = models.BillboardMedia.objects.filter(billboard=cc)
-		photo = None
-		if(len(medias) > 0):
-			photo = medias[0].photo
-		else:
-			return HttpResponse("Billboard improperly configured. No photo.",status=404)
-
-		if(target == "r"):#target is referral
+		if(target == "r"):#target is referral #todo add in referral params for pixel trakcing
 			space = '%20'
 			#increment viral ctr
-			print "got here"
-			analytics_actions.clickViral(request,employee,photo,cc)
+			analytics_actions.clickBillboardReferral(request,employee,cd.billboardMedia)
 			return redirect('https://robinboard.com/viral?ename='+employee.first+space+employee.last+'&cname='+employee.company.name+'&cdomain'+employee.company.domain)
 		elif(target == "c"):#target is campaign
 			#increment billboard ctr
-			analytics_actions.clickBillboard(request,employee,photo,cc)
-			return redirect(cc.targeturl)#redirects to real photo
+			analytics_actions.clickBillboard(request,employee,cd.billboardMedia)
+			return redirect(cd.billboardMedia.billboard.targeturl)#redirects to real photo
 	return HttpResponse(status=404)
 	#get user based on param
 	#increment ctr count
