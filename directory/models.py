@@ -33,5 +33,6 @@ class Employee(models.Model):#move url and group to the location
     title = models.CharField(max_length=150, blank=True, null=True)
     email = models.EmailField(max_length=254)
     url = models.CharField(max_length=2500, unique=True)#random for safety)
+    confirmed = models.BooleanField(default=False)
     class Meta:
         unique_together = (("email","company"),)

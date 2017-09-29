@@ -295,6 +295,7 @@ def user(request):
 @api_view(['POST'])
 def onboardEmployee(request):
 	data = JSONParser().parse(request)#parse incoming data
+
 #add edit delete individual Employee
 @api_view(['POST','GET','PUT','DELETE'])
 def employee(request):
@@ -424,7 +425,23 @@ def employee(request):
 		return JSONResponse(serializer.errors, status=400)
 	else:
 		return HttpResponse(status=404)
-
+@api_view(['GET'])
+@permission_classes((AllowAny, ))
+def confirmEmployee(request):
+	if request.method == "GET":
+		confirmCode = request.query_params.get("confirmCode")
+		email = request.query_params.get("email")
+		try:
+			user = models.Employee.objects.get(email=email)
+		except models.User.DoesNotExist:
+			return HttpResponse("invalid.",status=403)
+		correct = generateConfirmCode(employee.email,employee.first_name,employee.last_name)
+		if correct == confirmCode:
+			employee.confirmed = True
+			employee.save()
+			return redirect("https://app.robinboard.com/confirmed",permanent=True)#redirect to app #TODO update to a page with custom code for email signature copy code
+		else:
+			return HttpResponse("invalid code.",status=403)
 @api_view(['POST','GET','PUT','DELETE'])
 def group(request):#get groups, delete groups.
 	query_type = request.query_params.get('type')

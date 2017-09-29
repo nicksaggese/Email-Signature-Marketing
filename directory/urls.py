@@ -13,6 +13,7 @@ urlpatterns = [
     url(r'^employee/' ,views.employee),
     url(r'^group/', views.group),
     url(r'^confirm-user/', views.confirmUser),
+    url(r'^confirm-employee/', views.confirmEmployee),
     url(r'^forgot-password/',views.forgotPassword),
     # url(r'group-employees/' views.groupEmployees),
     url(r'^api-token-auth/', obtain_jwt_token),
