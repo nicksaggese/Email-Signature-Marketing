@@ -14,7 +14,6 @@ from rest_framework.permissions import AllowAny
 from directory.models import Employee
 import os
 import imgur
-import currentBillboard
 
 from datetime import datetime
 import pytz
@@ -22,9 +21,9 @@ from dateutil import parser as datetime_parser
 from analytics import actions as analytics_actions
 from analytics import models as analytics_models
 from directory.helpers import disallowChanges, userDateParse
-
+import helpers
 import re
-
+from django.utils import timezone
 from robinboardAPI.permissions import check_user_access, BadAccess
 
 
@@ -350,66 +349,38 @@ def display(request, employee_url):
 				raise Employee.DoesNotExist
 		except Employee.DoesNotExist:
 			return HttpResponse("No employee matches query.",status=404)
-		cc = currentBillboard.findCurrentCampaign(employee)
-		if(cc is None):
-			return HttpResponse("Billboard improperly configured. No billboard.",status=404)
-
-		#AB TEST Module
-		medias = models.BillboardMedia.objects.filter(billboard=cc, on=True)#used multiple times later so good for memory cache
-		photo = None
-		print medias
-		if(len(medias) > 0):
-			print "medias found"
-			displays = analytics_models.Billboard.objects.filter(billboard=cc,interaction__icontains="display",target__icontains="billboard")
-			if(len(displays) < cc.ABSample):#pre sample size, always serve lowest number served so far
-				print "sample area"
-				#continue ab
-				topMedia = medias[0]
-				topMediaDisplays = 0
-				for media in medias:
-					dcount = displays.filter(billboardMedia=media).count() #got min displayed photo
-					if(dcount > topMediaDisplays):
-						topMedia = media
-						topMediaDisplays = dcount
-						continue
-					else:
-						continue
-				photo = topMedia.photo
-			else:#past sample size
-				#find winner
-				winners = medias.filter(ABWinner=True)
-				if(len(winners) is 0):#no winner declared, declare one
-					#ctr comparison
-					clicks = analytics_models.Billboard.objects.filter(billboardMedia__billboard=cc.id,interaction__icontains="click",target__icontains="billboard")
-					topMedia = medias[0]
-					topMediaClicks = clicks.filter(billboardMedia=medias[0]).count()
-					topMediaDisplays = displays.filter(billboardMedia=medias[0]).count() #got min displayed photo
-					topCTR = 0.00
-					if topMediaDisplays is not 0:
-						topCTR = clicks / float(topMediaDisplays)
-					for media in medias[1:]:
-						ccount = clicks.filter(billboardMedia=media).count()
-						dcount = displays.filter(billboardMedia=media).count() #got min displayed photo
-						ctr = 0.00
-						if(dcount is not 0):
-							ctr = ccount / float(dcount)
-						if(ctr > topCTR):
-							topMedia = media
-							topMediaDisplays = dcount
-							topMediaClicks = ccount
-							topCTR = ctr
-							continue
-						else:
-							continue
-					#end for declare winners
-					topMedia.ABWinner = True
-					topMedia.save()#save to db
-					photo = topMedia.photo
-				else:
-					photo = winners[0].photo
-		else:
-			return HttpResponse("Billboard improperly configured. No photo.",status=404)
-		analytics_actions.displayBillboard(request,employee,photo,cc)
+		cd = None
+		media = None
+		expiredDisplay = False
+		noDisplay = False
+		try:
+			cd = models.CurrentDisplay.objects.get(employee = employee.id)
+			if(cd.expires < timezone.now()):
+				raise helpers.ExpiredDisplay
+			else:
+				media = cd.billboardMedia
+		except models.CurrentDisplay.DoesNotExist:
+			noDisplay = True
+		except helpers.ExpiredDisplay:
+			expiredDisplay = True
+		if(noDisplay or expiredDisplay):
+			cc = helpers.findCurrentCampaign(employee)
+			if(cc is None):
+				return HttpResponse("Billboard improperly configured. No billboard.",status=404)
+			#AB TEST Module
+			medias = models.BillboardMedia.objects.filter(billboard=cc, on=True)#used multiple times later so good for memory cache
+			if(len(medias) > 0):
+				media = helpers.nextBillboard(medias)
+			else:
+				return HttpResponse("Billboard improperly configured. No photo.",status=404)
+			if(noDisplay):
+				cd = models.CurrentDisplay(employee=employee,billboardMedia=media,expires=(datetime.now()+timedelta(hours=8)))
+				cd.save()
+			elif(expiredDisplay):
+				cd.billboardMedia = media
+				cd.expires = datetime.now()+timedelta(hours=8)
+				cd.save()
+		analytics_actions.displayBillboard(request,employee,media)#record analytics
 
 
 		# 'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)'
@@ -448,7 +419,7 @@ def clickthrough(request):
 			print employee
 			return HttpResponse("No employee specified.",status=404)
 
-		cc = currentBillboard.findCurrentCampaign(employee)
+		cc = helpers.findCurrentCampaign(employee)
 		if(cc is None):
 			return redirect("https://"+employee.company.domain+"/")
 

@@ -9,32 +9,31 @@ def buildEvent(request):
         "language": data.get("HTTP_ACCEPT_LANGUAGE"),
     }
 #Billboard
-def addBillboardInfo(e,employee,photo,billboard):
-    e["media"]=photo
+def addBillboardInfo(e,employee,,billboardMedia):
     e["employee"]=employee
-    e["billboardMedia"]=billboard
+    e["billboardMedia"]=billboardMedia
     return e
-def displayBillboard(request,employee,photo,billboard):
+def displayBillboard(request,employee,billboardMedia):
     e = buildEvent(request)
-    e = addBillboardInfo(e,employee,photo,billboard)
+    e = addBillboardInfo(e,employee,billboardMedia)
     e["interaction"]="display"
     # e["target"]="billboard"
     e = models.Billboard(**e)
     e.save()
-def clickBillboard(request,employee,photo,billboard):
+def clickBillboard(request,employee,billboardMedia):
     e = buildEvent(request)
-    e = addBillboardInfo(e,employee,photo,billboard)
+    e = addBillboardInfo(e,employee,billboardMedia)
     e["interaction"]="click"
     # e["target"]="billboard"
     e = models.Billboard(**e)
     e.save()
 
-def displayBillboardReferral(request,employee,photo,billboard):
+def displayBillboardReferral(request,employee,billboardMedia):
     e = buildEvent(request)
     e["interaction"]="display"
     e = models.BillboardReferral(**e)
     e.save()
-def clickBillboardReferral(request,employee,photo,billboard):
+def clickBillboardReferral(request,employee,billboardMedia):
     e = buildEvent(request)
     e["interaction"]="click"
     e = models.BillboardReferral(**e)

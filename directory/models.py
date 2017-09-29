@@ -24,7 +24,7 @@ class Group(models.Model):
     name = models.CharField(max_length=150)
     class Meta:
         unique_together = (("company","name"),)
-class Employee(models.Model):
+class Employee(models.Model):#move url and group to the location
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     groups = models.ManyToManyField(Group, blank=True)
     first = models.CharField(max_length=150)

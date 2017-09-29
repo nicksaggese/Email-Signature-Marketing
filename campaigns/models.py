@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from django.db import models
 
-from directory.models import Group,Company
+from directory.models import Group,Company,Employee
 # Create your models here.
 class Billboard(models.Model):
     company = models.ForeignKey(Company, related_name ="owner",on_delete=models.CASCADE)
@@ -25,3 +25,6 @@ class BillboardMedia(models.Model):
     photo = models.ForeignKey(Photo, on_delete=models.CASCADE)
     on = models.BooleanField(default=True)
     ABWinner = models.BooleanField(default=False)
+class CurrentDisplay(Employee):
+    billboardMedia = models.ForeignKey(BillboardMedia,on_delete=models.CASCADE)
+    expires = models.DateTimeField(auto_now=True)
