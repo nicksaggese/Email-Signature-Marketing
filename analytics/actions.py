@@ -9,7 +9,7 @@ def buildEvent(request):
         "language": data.get("HTTP_ACCEPT_LANGUAGE"),
     }
 #Billboard
-def addBillboardInfo(e,employee,,billboardMedia):
+def addBillboardInfo(e,employee,billboardMedia):
     e["employee"]=employee
     e["billboardMedia"]=billboardMedia
     return e
