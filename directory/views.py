@@ -19,7 +19,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import models as auth_models
 
 from .helpers import disallowChanges, JSONResponse, domainFromEmail, checkEmail, processUserReturn
-from .helpers import generateConfirmCode, userConfirmSequence, createEmployeeURL, createUserURL
+from .helpers import generateConfirmCode, userConfirmSequence, createEmployeeURL, createUserURL,employeeConfirmSequence
 
 import os
 from . import userEmails
@@ -293,25 +293,49 @@ def user(request):
 			return HttpResponse(status=404)
 	return JSONResponse(serializer.errors, status=400)
 @api_view(['POST'])
-def onboardEmployee(request):
+@permission_classes((AllowAny, ))
+def onboardEmployee(request):#check whether company exists...
 	data = JSONParser().parse(request)#parse incoming data
-
+	try:
+		data["company"] = models.Company.objects.get(domain=domainFromEmail(data.get('email')))#different from traditional post route
+	except models.Company.DoesNotExist:
+		return HttpResponse("Company doesn't exist yet.",status=404)#eventually record these as a growth tactic
+	if(not checkEmail(data,request)):
+		return  HttpResponse(status=400)
+	data['url'] = createEmployeeURL(data)
+	serializer = serializers.EmployeeSerializer(data=data)
+	if serializer.is_valid():
+		serializer.save()
+		try:
+			e = models.Employee.objects.get(company=request.user.user.company.id,email=data.get('email'))
+			employeeConfirmSequence(e.email,e.first,e.last)
+			analytics_actions.onboardEmployee(request,employee)
+		except models.Employee.DoesNotExist:
+			return HttpResponse("Employee not created correctly",status=404)
+		except Exception as e:
+			return HttpResponse(e,status=500)#email error
+		return JSONResponse(serializer.data, status=200)
 #add edit delete individual Employee
 @api_view(['POST','GET','PUT','DELETE'])
-def employee(request):
+def employee(request):#todo add ref
 	query_type = request.query_params.get('type')
 	if(query_type == "single"):
 		if request.method == 'POST':
 			data = JSONParser().parse(request)#parse incoming data
-
 			data["company"] = request.user.user.company.id#set company to current user
-
 			if(not checkEmail(data,request)):
 				return  HttpResponse(status=400)
 			data['url'] = createEmployeeURL(data)
 			serializer = serializers.EmployeeSerializer(data=data)
 			if serializer.is_valid():
 				serializer.save()
+				try:
+					e = models.Employee.objects.get(company=request.user.user.company.id,email=data.get('email'))
+					employeeConfirmSequence(e.email,e.first,e.last)
+				except models.Employee.DoesNotExist:
+					return HttpResponse("Employee not created correctly",status=404)
+				except Exception as e:
+					return HttpResponse(e,status=500)#email error
 				return JSONResponse(serializer.data, status=200)
 		elif request.method == 'GET':
 			try:
@@ -326,7 +350,7 @@ def employee(request):
 				return HttpResponse(b,status=401)
 		elif request.method == 'PUT':
 			data = JSONParser().parse(request)#parse incoming data
-			disallowed = ["url","company"]
+			disallowed = ["url","company","confirmed"]
 			data = disallowChanges(disallowed,data)
 			if(not checkEmail(data,request)):
 				return  HttpResponse(status=400)
@@ -374,7 +398,7 @@ def employee(request):
 			employees = JSONParser().parse(request)#parse incoming data
 			response = []
 			for data in employees:
-				disallowed = ["url","company"]
+				disallowed = ["url","company","confirmed"]
 				data = disallowChanges(disallowed,data)
 				if(not checkEmail(data,request)):
 					return  HttpResponse(status=400)

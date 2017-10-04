@@ -20,3 +20,12 @@ def RequestUserConfirm(email,confirmCode,temp_pass):
     send_mail(subject,message,fromEmail,to,fail_silently=False)
     return True
     #exceptions handled in outside catch
+
+def RequestEmployeeConfirm(email,confirmCode):
+    subject = "Robinboard Confirm Employee Email"
+    message = "<a href=\"http://localhost:8000/directory/confirm-user/?confirmCode=" + confirmCode + "&email=" + email + "\">Click to confirm your employee account with with Robinboard.</a>"
+    fromEmail = "support@robinboard.com"
+    to = [email,]
+    send_mail(subject,message,fromEmail,to,fail_silently=False)
+    return True
+    #exceptions handled in outside catch

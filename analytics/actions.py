@@ -49,11 +49,13 @@ def buildOnsiteEvent(request):
     e= buildEvent(request)
     e["page"] = request.query_params.get('ref_page')
     return e
-def refChainEvent(request,ref_chain):
+def refChainEvent(request):
+    ref_chain = getRefChain(request)
     e = buildOnsiteEvent(request)
     e["chain"] = ref_chain
     return e
-def employeeReferral(ref_chain,request):
+def employeeReferral(request):
+    ref_chain = getRefChain(request)
     try:
         employee = directory_models.Employee.objects.get(url=request.query_params.get('ref_party'))
     except directory_models.Employee.DoesNotExist:
@@ -63,7 +65,8 @@ def employeeReferral(ref_chain,request):
     e["source"] = request.query_params.get('ref_source')
     er = models.EmployeeReferral(**e)
     er.save()
-def userReferral(ref_chain,request):
+def userReferral(request):
+    ref_chain = getRefChain(request)
     try:
         user = directory_models.User.objects.get(url=request.query_params.get('ref_party'))
     except directory_models.User.DoesNotExist:
@@ -74,10 +77,12 @@ def userReferral(ref_chain,request):
     ur = models.UserReferral(**e)
     ur.save()
 
-def proprietaryReferral(ref_chain,request):
+def proprietaryReferral(request):
+    ref_chain = getRefChain(request)
     pageView(request,ref_chain)#TODO not setup yet so default to pageview
 
-def pageView(ref_chain,request):
+def pageView(request):
+    ref_chain = getRefChain(request)
     e = refChainEvent(request,ref_chain)
     pv = models.PageView(**e)
     pv.save()

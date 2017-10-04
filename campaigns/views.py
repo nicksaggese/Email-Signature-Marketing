@@ -338,7 +338,7 @@ from django.utils.cache import patch_cache_control
 from urllib2 import urlopen
 @api_view(['GET'])
 @permission_classes((AllowAny, ))
-def display(request, employee_url):
+def display(request, employee_url): # r is referrer , c is campaign
 	if request.method == 'GET':
 		target = request.query_params.get('t')
 		#rate limiter funciton here TODO
@@ -350,10 +350,12 @@ def display(request, employee_url):
 				raise Employee.DoesNotExist
 		except Employee.DoesNotExist:
 			return HttpResponse("No employee matches query.",status=404)
+
 		cd = None
 		media = None
 		expiredDisplay = False
 		noDisplay = False
+
 		try:
 			cd = models.CurrentDisplay.objects.get(employee = employee.id)
 			if(cd.expires < timezone.now()):

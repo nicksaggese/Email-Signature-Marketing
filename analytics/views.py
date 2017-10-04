@@ -45,20 +45,17 @@ def billboard(request):
         return HttpResponse("No such billboard found",status=400)
 
 @api_view(['GET'])
-@permission_classes((AllowAny, ))
+@permission_classes((AllowAny,))
 def trackingPixel(request):
 	if request.method == "GET":
-		ref_chain = actions.getRefChain(request)
 		ref_type = request.query_params.get('ref_type')#employee, user, proprietary
-		ref_party = request.query_params.get('ref_party')#specific employee, user, proprietary
-		ref_page = request.query_params.get('ref_page')#page the request was made on
 		# ref_target # translate the page into the appropriate target, be it employee signup or company onboard
 		if(ref_type == "emp"):
-			actions.employeeReferral(ref_chain,request)
+			actions.employeeReferral(request)
 		elif(ref_type == "user"):
-			actions.userReferral(ref_chain,request)
+			actions.userReferral(request)
 		elif(ref_type == "prop"):#reengineer to use utm
-			actions.proprietaryReferral(ref_chain,request)
+			actions.proprietaryReferral(request)
 		else:#pageview
 			actions.pageView(ref_chain,request)
 		return HttpResponse(status=200)#blank return

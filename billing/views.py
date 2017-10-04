@@ -15,6 +15,8 @@ from . import serializers
 # Create your views here.
 import stripe, os
 
+from datetime import timedelta
+
 stripe.api_key = os.environ.get('STRIPE_API_KEY')
 
 class JSONResponse(HttpResponse):
@@ -25,6 +27,15 @@ class JSONResponse(HttpResponse):
 		content = JSONRenderer().render(data)
 		kwargs['content_type'] = 'application/json'
 		super(JSONResponse, self).__init__(content, **kwargs)
+
+creditQualifier = {
+	min_employees: 25,
+	min_displays_employee: 100,
+	window_to_credit: timedelta(weeks=6)#time to reach these metrics before referral is dead.
+}
+
+freeMonthlyCredits = 10
+
 def getBillingDetails(request):
     cid = request.user.user.company.id
     return models.BillingInfo.objects.filter(company=cid,deleted=False)
@@ -110,3 +121,9 @@ def billingDetails(request):
 def bills(request):
     if request.method = 'GET':
         pass#return list of all bills... and payment status
+def payBill(request):#for unpaid bills where payment failed
+	pass
+#price updates handled manually as well as referral bonuses
+def creditBalance(request):#current balance of available credits
+	pass
+#credit processing will be done automatically, bill issuing will be done automatically

@@ -61,3 +61,6 @@ from . import userEmails
 def userConfirmSequence(email,first,last,tempPass):
 	confirmCode = generateConfirmCode(email,first,last)
 	userEmails.RequestUserConfirm(email,confirmCode,tempPass)
+def employeeConfirmSequence(email,first,last):
+	confirmCode = generateConfirmCode(email,first,last)
+	userEmails.RequestEmployeeConfirm(email,confirmCode)

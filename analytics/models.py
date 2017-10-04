@@ -55,6 +55,6 @@ class Conversion(models.Model):
     class Meta:
         abstract = True
 class EmployeeOnboard(Conversion):
-    employee = models.ForeignKey(Employee)#new employee
+    new_employee = models.ForeignKey(Employee)#new employee
 class CompanyOnboard(Conversion):#referral
-    company = models.ForeignKey(Company)#new company
+    new_company = models.ForeignKey(Company)#new company
