@@ -8,10 +8,9 @@ from directory.models import Company
 from analytics.models import CompanyOnboard
 class BillingInfo(models.Model):
     company = models.ForeignKey(Company)
-    deleted = models.BooleanField(default=False)
     stripeCustomer = models.CharField(max_length=1500)
     budget = models.DecimalField(max_digits=100, decimal_places=2, default=2.00)#prices in USD... stripe does conversion
-
+    dateTime = models.DateTimeField(auto_now=True)
 class Price(models.Model):#historical pricing, per click
     startDate = models.DateTimeField(auto_now=True)
     price = models.DecimalField(max_digits=100, decimal_places=2, default=2.00)

@@ -89,18 +89,18 @@ def billingDetails(request):
                 return HttpResponse(status=200)#don't need to return anything.
             except Exception as e:
                 return HttpResponse(str(e),status=500)
-    elif request.method == "DELETE":
-        bi = getBillingDetails(request)
-        if(len(bi) < 1):
-            return HttpResponse("no such billing detail.",status=404)
-        else:
-            bi = bi[0]
-            try:
-                customer = stripe.Customer.retrieve(bi.stripeCustomer)
-                customer.delete()
-                return HttpResponse("customer deleted.",status=200)
-            except Exception as e:
-                return HttpResponse("no such stripe customer", status=404)
+    # elif request.method == "DELETE":
+    #     bi = getBillingDetails(request)
+    #     if(len(bi) < 1):
+    #         return HttpResponse("no such billing detail.",status=404)
+    #     else:
+    #         bi = bi[0]
+    #         try:
+    #             customer = stripe.Customer.retrieve(bi.stripeCustomer)
+    #             customer.delete()
+    #             return HttpResponse("customer deleted.",status=200)
+    #         except Exception as e:
+    #             return HttpResponse("no such stripe customer", status=404)
     elif request.method == "GET":
         bi = getBillingDetails(request)
         if(len(bi) < 1):
