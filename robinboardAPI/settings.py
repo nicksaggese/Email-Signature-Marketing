@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',#might not need this anymore with jwt
     'django_s3_storage',
     'corsheaders',
+    'django_celery_results',
     #user applications
     'directory',
     'campaigns',
