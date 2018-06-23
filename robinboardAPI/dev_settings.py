@@ -1,7 +1,7 @@
 # Start with our base settings
 from .settings import *
 DEBUG=True
-CELERY_BROKER_URL = 'amqp://localhost'
+
 
 # DATABASES = {
 #         'default': {
@@ -14,17 +14,5 @@ CELERY_BROKER_URL = 'amqp://localhost'
 #         }
 # }
 
-from celery.schedules import crontab
-# Other Celery settings
-CELERY_BEAT_SCHEDULE = {
-    'processOutstandingCredits': {
-        'task': 'billing.tasks.processOutstandingCredits',
-        'schedule': crontab(minute=0, hour=0),
-        # 'args': (*args)
-    },
-    'processBilling': {
-        'task': 'billing.tasks.processBilling',
-        'schedule': crontab(minute=0, hour=3),
-        # 'args': (*args)
-    }
-}
+
+CELERY_BROKER_URL = 'amqp://localhost'
